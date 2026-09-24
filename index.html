@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Organigrama: Hospital</title>
+<style>
+  :root{
+    --bg1:#1e2a5e;
+    --bg2:#3b3486;
+    --card:#ffffff;
+    --card-ink:#1c2340;
+    --muted:#5b6280;
+    --accent:#ff6b6b;
+    --accent2:#4ecdc4;
+    --tier1:#e8a33d;
+    --tier2:#3d8be8;
+    --tier3:#3dbf6c;
+    --danger:#e8503d;
+    --radius:16px;
+    --shadow:0 8px 24px rgba(10,15,40,.25);
+    font-size:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;overflow:hidden;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    color:var(--card-ink);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+    width:100vw;
+  }
+  #app{position:relative;flex:1;display:flex;flex-direction:column;min-height:0;}
+
+  /* ---------- Screens ---------- */
+  .screen{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    flex:1;
+    min-height:0;
+    padding:clamp(12px,4vw,32px);
+    text-align:center;
+    overflow-y:auto;
+  }
+  .screen.active{display:flex;}
+  .logo{
+    font-size:clamp(28px,7vw,48px);
+    font-weight:800;
+    color:#fff;
+    margin:0 0 6px;
+    text-shadow:0 4px 16px rgba(0,0,0,.3);
+  }
+  .subtitle{
+    color:#cfd4ff;
+    font-size:clamp(13px,2.6vw,16px);
+    max-width:520px;
+    margin:0 0 28px;
+    line-height:1.5;
+  }
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:999px;
+    padding:clamp(12px,3vw,16px) clamp(26px,6vw,40px);
+    font-size:clamp(15px,3.2vw,18px);
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+    transition:transform .12s ease, box-shadow .12s ease;
+    touch-action:manipulation;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-secondary{background:rgba(255,255,255,.15);color:#fff;border:2px solid rgba(255,255,255,.5);}
+  .btn-ghost{background:transparent;color:#cfd4ff;text-decoration:underline;box-shadow:none;padding:8px 10px;}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+
+  #topHelpBtn{
+    position:absolute;
+    top:calc(env(safe-area-inset-top,0px) + 12px);
+    right:14px;
+    width:38px;height:38px;
+    border-radius:50%;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    border:2px solid rgba(255,255,255,.5);
+    font-weight:800;
+    font-size:16px;
+    z-index:50;
+    cursor:pointer;
+  }
+
+  /* ---------- Level select ---------- */
+  .diff-row{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    margin-bottom:18px;color:#cfd4ff;font-size:13px;font-weight:600;
+  }
+  .diff-btn{
+    appearance:none;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.1);
+    color:#fff;border-radius:999px;padding:7px 16px;font-size:13px;font-weight:700;
+    cursor:pointer;touch-action:manipulation;
+  }
+  .diff-btn.active{background:var(--accent2);border-color:var(--accent2);color:#0d2926;}
+
+  .level-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:16px;
+    width:100%;
+    max-width:760px;
+    margin-top:8px;
+  }
+  @media (min-width:680px){
+    .level-grid{grid-template-columns:repeat(3,1fr);}
+  }
+  .level-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:20px 16px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    border:3px solid transparent;
+    transition:transform .15s ease;
+    position:relative;
+  }
+  .level-card:active{transform:scale(.97);}
+  .level-card.locked{opacity:.6;cursor:default;}
+  .level-card .icon{font-size:clamp(34px,8vw,44px);}
+  .level-card h3{margin:8px 0 4px;font-size:clamp(16px,3.6vw,19px);}
+  .level-card p{margin:0;color:var(--muted);font-size:13px;}
+  .badge{
+    position:absolute;top:10px;right:10px;
+    background:var(--tier1);color:#fff;font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:999px;
+  }
+
+  /* ---------- Game screen / HUD ---------- */
+  #screen-game{padding:0;justify-content:flex-start;}
+  .hud{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:calc(env(safe-area-inset-top,0px) + 10px) 62px 10px 16px;
+    color:#fff;
+    flex-wrap:wrap;
+    background:rgba(0,0,0,.15);
+  }
+  .hud-left{font-weight:800;font-size:clamp(14px,3vw,17px);}
+  .hud-mid{font-size:clamp(12px,2.6vw,14px);color:#dfe2ff;flex:1;text-align:center;min-width:140px;}
+  .hud-right{display:flex;gap:10px;font-size:clamp(12px,2.6vw,14px);font-weight:700;}
+
+  .viewport{flex:1;min-height:0;width:100%;overflow:hidden;position:relative;}
+  .track{
+    display:flex;
+    width:200%;
+    height:100%;
+    transition:transform .8s cubic-bezier(.65,0,.35,1);
+    transform:translateX(0%);
+  }
+  .phase{width:50%;height:100%;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
+
+  /* ---------- Phase 1: lluvia ---------- */
+  #lane{
+    position:relative;
+    flex:1;
+    min-height:0;
+    margin:0 10px 10px;
+    background:rgba(255,255,255,.08);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .falling-item{
+    position:absolute;
+    left:0;top:-70px;
+    transform:translateX(-50%);
+    background:var(--card);
+    color:var(--card-ink);
+    border-radius:12px;
+    padding:8px 12px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:clamp(12px,2.8vw,14px);
+    font-weight:700;
+    max-width:min(46vw,220px);
+    box-shadow:0 4px 10px rgba(0,0,0,.25);
+    cursor:pointer;
+    user-select:none;
+    touch-action:manipulation;
+    border:2px solid #fff;
+  }
+  .falling-item .fi-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .falling-item.caught{animation:pop .26s ease forwards;}
+  .falling-item.wrong{animation:shake .3s ease;border-color:var(--danger);}
+  @keyframes pop{to{transform:translateX(-50%) scale(1.5);opacity:0;}}
+  @keyframes shake{
+    0%,100%{transform:translateX(-50%);}
+    25%{transform:translateX(calc(-50% - 6px));}
+    75%{transform:translateX(calc(-50% + 6px));}
+  }
+  /* Igual que @keyframes shake pero centrado en 0: para elementos que no
+     parten de translateX(-50%) (como .node-box), si no, el "temblor" los
+     deja corridos a la izquierda durante toda la animación. */
+  @keyframes shakeInPlace{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+
+  /* ---------- Phase 2: tablero ---------- */
+  #board{
+    flex:1;
+    min-height:0;
+    margin:0 10px;
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-evenly;
+    gap:8px;
+    position:relative;
+    overflow-y:auto;
+  }
+  #connSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+  .tier-row{position:relative;z-index:2;}
+  .tier-label{color:#dfe2ff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px 4px;}
+  .tier-slots{
+    display:flex;flex-wrap:wrap;gap:clamp(6px,1.6vw,14px);
+    justify-content:center;align-content:center;
+    min-height:56px;
+    padding:8px;
+    border-radius:12px;
+    background:rgba(255,255,255,.10);
+    border:2px dashed rgba(255,255,255,.25);
+    transition:background .15s ease,border-color .15s ease;
+  }
+  .tier-row.drag-over .tier-slots{background:rgba(255,255,255,.28);border-color:#fff;}
+  @media (max-width:700px){
+    /* En pantallas angostas, todo en una sola fila (las cajas se angostan)
+       en vez de envolver en varias líneas: envolver reordena visualmente
+       las cajas y eso puede volver a cruzar las líneas de conexión. */
+    .tier-slots{flex-wrap:nowrap;gap:4px;padding:6px 4px;}
+    .tier-row[data-tier="3"] .node-box{max-width:19vw;padding:6px 5px;font-size:10px;gap:3px;}
+    .tier-row[data-tier="3"] .node-icon{font-size:12px;}
+  }
+  .node-box{
+    position:relative;z-index:2;
+    background:var(--card);color:var(--card-ink);
+    border-radius:12px;padding:8px 12px;
+    display:flex;align-items:center;gap:6px;
+    font-size:clamp(11px,2.6vw,13px);font-weight:700;
+    box-shadow:0 3px 8px rgba(0,0,0,.2);
+    border:3px solid #ccc;
+    max-width:min(40vw,200px);
+    cursor:default;
+  }
+  .node-box .node-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tier-row[data-tier="1"] .node-box{border-color:var(--tier1);}
+  .tier-row[data-tier="2"] .node-box{border-color:var(--tier2);}
+  .tier-row[data-tier="3"] .node-box{border-color:var(--tier3);}
+  .node-box.clickable{cursor:pointer;touch-action:none;}
+  .node-box.selected{outline:3px solid var(--accent2);box-shadow:0 0 0 4px rgba(78,205,196,.35);}
+  .node-box.connected{background:#eefbf1;}
+  .node-box.shake{animation:shakeInPlace .3s ease;}
+  .conn-line{stroke:#fff;stroke-width:3;stroke-linecap:round;}
+
+  .inventory-bar{
+    display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
+    padding:10px;min-height:64px;
+  }
+  .inv-item{
+    background:var(--card);color:var(--card-ink);
+    border-radius:12px;padding:8px 12px;
+    display:flex;align-items:center;gap:6px;
+    font-size:clamp(11px,2.6vw,13px);font-weight:700;
+    box-shadow:0 4px 10px rgba(0,0,0,.25);
+    border:2px solid var(--accent2);
+    cursor:grab;touch-action:none;user-select:none;
+    max-width:min(40vw,200px);
+  }
+  .inv-item.dragging{
+    cursor:grabbing;
+    box-shadow:0 16px 34px rgba(0,0,0,.45);
+    transform:scale(1.1) rotate(-3deg);
+    opacity:.98;
+  }
+
+  .node-box.connect-source{box-shadow:0 10px 22px rgba(0,0,0,.35);transform:scale(1.06);z-index:5;}
+  .node-box.target-hover{outline:3px solid var(--accent2);box-shadow:0 0 0 5px rgba(78,205,196,.35);}
+  .conn-line.temp{stroke:var(--accent2);stroke-dasharray:7 6;opacity:.95;}
+
+  /* ---------- Victory ---------- */
+  .victory-card{
+    background:var(--card);border-radius:var(--radius);
+    padding:clamp(24px,6vw,40px);box-shadow:var(--shadow);
+    max-width:420px;width:100%;
+  }
+  .victory-card .big{font-size:clamp(36px,9vw,54px);margin:6px 0;}
+  .stat-row{display:flex;justify-content:space-around;margin:18px 0;}
+  .stat{display:flex;flex-direction:column;}
+  .stat b{font-size:clamp(20px,5vw,26px);}
+  .stat span{color:var(--muted);font-size:12px;}
+
+  /* ---------- Tutorial modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(10,12,30,.72);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;z-index:200;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-box{
+    background:var(--card);border-radius:var(--radius);
+    max-width:460px;width:100%;padding:clamp(20px,5vw,30px);
+    max-height:88vh;overflow-y:auto;
+    box-shadow:var(--shadow);text-align:left;
+  }
+  .modal-box h2{margin-top:0;}
+  .tutorial-diagram{display:flex;flex-direction:column;align-items:center;gap:8px;margin:18px 0;}
+  .tut-row{display:flex;gap:10px;}
+  .tut-box{
+    background:#f2f3fb;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;
+    border:2px solid var(--tier2);
+  }
+  .tut-box.top{border-color:var(--tier1);}
+  .tut-box.low{border-color:var(--tier3);}
+  .tut-arrow{color:var(--muted);font-size:12px;}
+
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);
+    background:#1c2340;color:#fff;padding:10px 18px;border-radius:999px;
+    font-size:13px;font-weight:600;opacity:0;pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;z-index:300;
+    max-width:88vw;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <button id="topHelpBtn" title="Ayuda">?</button>
+
+  <!-- Pantalla de inicio -->
+  <section id="screen-start" class="screen active">
+    <div class="logo">🏢 Organigrama</div>
+    <p class="subtitle">Atrapá las áreas correctas y armá la estructura jerárquica de cada empresa antes de que se te acabe la precisión.</p>
+    <button class="btn btn-primary" id="btnPlay">Jugar</button>
+  </section>
+
+  <!-- Selección de nivel -->
+  <section id="screen-levels" class="screen">
+    <div class="logo" style="font-size:clamp(22px,5vw,30px);">Elegí una empresa</div>
+    <div class="diff-row">
+      <span>Dificultad:</span>
+      <button class="diff-btn" data-difficulty="easy">Fácil</button>
+      <button class="diff-btn active" data-difficulty="normal">Normal</button>
+      <button class="diff-btn" data-difficulty="hard">Difícil</button>
+    </div>
+    <div class="level-grid">
+      <div class="level-card" data-level="hospital">
+        <div class="icon">🏥</div>
+        <h3>Hospital</h3>
+        <p>Armá la jerarquía médica y administrativa.</p>
+      </div>
+      <div class="level-card locked" data-level="videogames">
+        <div class="badge">Próximamente</div>
+        <div class="icon">🎮</div>
+        <h3>Estudio de Videojuegos</h3>
+        <p>Disponible pronto.</p>
+      </div>
+      <div class="level-card locked" data-level="supermarket">
+        <div class="badge">Próximamente</div>
+        <div class="icon">🛒</div>
+        <h3>Supermercado</h3>
+        <p>Disponible pronto.</p>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="btnBackToStart">← Volver</button>
+  </section>
+
+  <!-- Pantalla de juego -->
+  <section id="screen-game" class="screen">
+    <div class="hud">
+      <div class="hud-left" id="hudScenario">Hospital</div>
+      <div class="hud-mid" id="hudStatus">0/8 recolectadas</div>
+      <div class="hud-right"><span id="hudTimer">⏱ 00:00</span></div>
+    </div>
+    <div class="viewport">
+      <div class="track" id="track">
+
+        <!-- Fase 1 -->
+        <div class="phase phase1">
+          <div id="lane"></div>
+        </div>
+
+        <!-- Fase 2 -->
+        <div class="phase phase2">
+          <div id="board">
+            <svg id="connSvg"></svg>
+            <div class="tier-row" data-tier="1">
+              <div class="tier-label">Nivel 1</div>
+              <div class="tier-slots" id="tier1"></div>
+            </div>
+            <div class="tier-row" data-tier="2">
+              <div class="tier-label">Nivel 2</div>
+              <div class="tier-slots" id="tier2"></div>
+            </div>
+            <div class="tier-row" data-tier="3">
+              <div class="tier-label">Nivel 3</div>
+              <div class="tier-slots" id="tier3"></div>
+            </div>
+          </div>
+          <div class="inventory-bar" id="inventoryBar"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Victoria -->
+  <section id="screen-victory" class="screen">
+    <div class="victory-card">
+      <div class="big">🏆</div>
+      <h2 style="margin:0 0 4px;">¡Organigrama completo!</h2>
+      <p style="color:var(--muted);margin:0;">Hospital</p>
+      <div class="stat-row">
+        <div class="stat"><b id="victoryTime">00:00</b><span>Tiempo total</span></div>
+        <div class="stat"><b id="victoryMistakes">0</b><span>Errores</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnReplay">Jugar de nuevo</button>
+        <button class="btn btn-secondary" id="btnToMenu">Volver al menú</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tutorial -->
+  <div class="modal-overlay hidden" id="tutorialModal">
+    <div class="modal-box">
+      <h2>Cómo se juega</h2>
+      <p><b>¿Qué es un organigrama?</b> Es un esquema que muestra cómo se organiza una empresa: quién depende de quién, desde la dirección general hasta cada área específica. Sirve para entender responsabilidades y a quién reportarle cada tema.</p>
+      <p><b>Fase 1 · La lluvia:</b> caen áreas de trabajo. Tocá solo las que pertenecen a la empresa elegida; evitá las de otras industrias.</p>
+      <div class="tutorial-diagram">
+        <div class="tut-box top">Dirección General</div>
+        <div class="tut-arrow">▲ reporta a</div>
+        <div class="tut-row">
+          <div class="tut-box">Dirección Médica</div>
+          <div class="tut-box">Administración</div>
+        </div>
+        <div class="tut-arrow">▲ reporta a</div>
+        <div class="tut-row">
+          <div class="tut-box low">Urgencias</div>
+          <div class="tut-box low">RR.HH.</div>
+        </div>
+      </div>
+      <p><b>Fase 2 · El tablero:</b> arrastrá cada área al nivel jerárquico correcto. Después, arrastrá una línea desde cada área hasta su superior directo para conectarla.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnCloseTutorial">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= Datos ================= */
+  var HOSPITAL_NODES = [
+    { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏛️' },
+    { id:'dm', name:'Dirección Médica',  tier:2, parent:'dg',  icon:'🩺' },
+    { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
+    { id:'ur', name:'Urgencias',         tier:3, parent:'dm',  icon:'🚑' },
+    { id:'ci', name:'Cirugía',           tier:3, parent:'dm',  icon:'🧑‍⚕️' },
+    { id:'en', name:'Enfermería',        tier:3, parent:'dm',  icon:'💉' },
+    { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
+    { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+  ];
+  var DISTRACTORS = [
+    { name:'Diseño de Niveles',   icon:'🎮' },
+    { name:'Programación',        icon:'💻' },
+    { name:'Arte y Animación',    icon:'🎨' },
+    { name:'Control de Calidad',  icon:'🐞' },
+    { name:'Cajas',               icon:'🛒' },
+    { name:'Reposición',          icon:'📦' },
+    { name:'Góndolas',            icon:'🥫' },
+    { name:'Logística',           icon:'🚚' }
+  ];
+  var DIFFICULTIES = {
+    easy:   { fallBase:6.4, fallMin:4.4, spawnMs:1200 },
+    normal: { fallBase:4.6, fallMin:2.6, spawnMs:950 },
+    hard:   { fallBase:3.2, fallMin:1.7, spawnMs:700 }
+  };
+
+  /* ================= Estado ================= */
+  var collected = [];
+  var mistakes = 0;
+  var remainingNeeded = [];
+  var activeNeededIds = new Set();
+  var spawnTimer = null;
+  var difficulty = 'normal';
+
+  var pendingQueue = [];
+  var placedNodes = {};
+  var connectionsDrawn = [];
+  var connectedSet = new Set();
+  var connectionModeActive = false;
+  var connDragState = null;
+
+  var elapsedSec = 0;
+  var timerInterval = null;
+  var tutorialShown = false;
+  var tutorialFromPlay = false;
+  var toastTimeout = null;
+  var dragState = null;
+
+  /* ================= DOM refs ================= */
+  var $ = function(id){ return document.getElementById(id); };
+  var lane = $('lane');
+  var board = $('board');
+  var connSvg = $('connSvg');
+  var track = $('track');
+  var inventoryBar = $('inventoryBar');
+  var hudStatus = $('hudStatus');
+  var hudTimer = $('hudTimer');
+  var toastEl = $('toast');
+
+  /* ================= Utils ================= */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+  function debounce(fn, ms){
+    var t;
+    return function(){
+      clearTimeout(t);
+      var args = arguments;
+      t = setTimeout(function(){ fn.apply(null, args); }, ms);
+    };
+  }
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(function(){ toastEl.classList.remove('show'); }, 2200);
+  }
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    $(id).classList.add('active');
+  }
+
+  /* ================= Timer ================= */
+  function startTimer(){
+    elapsedSec = 0;
+    updateTimerDisplay();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function(){
+      elapsedSec++;
+      updateTimerDisplay();
+    }, 1000);
+  }
+  function stopTimer(){ clearInterval(timerInterval); }
+  function updateTimerDisplay(){
+    var m = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+    var s = String(elapsedSec % 60).padStart(2, '0');
+    hudTimer.textContent = '⏱ ' + m + ':' + s;
+  }
+
+  /* ================= Fase 1: lluvia ================= */
+  function trySpawn(){
+    if (lane.children.length >= 5) return;
+    var useNeeded;
+    if (remainingNeeded.length === 0) useNeeded = false;
+    else if (activeNeededIds.size === 0) useNeeded = true;
+    else useNeeded = Math.random() < 0.55;
+
+    if (useNeeded){
+      var id = remainingNeeded.shift();
+      activeNeededIds.add(id);
+      var nodeData = HOSPITAL_NODES.filter(function(n){ return n.id === id; })[0];
+      spawnFallingItem(nodeData, true);
+    } else {
+      var d = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
+      spawnFallingItem(d, false);
+    }
+  }
+
+  function spawnFallingItem(data, isNeeded){
+    var el = document.createElement('div');
+    el.className = 'falling-item ' + (isNeeded ? 'needed' : 'distractor');
+    el.innerHTML = '<span class="fi-icon">' + data.icon + '</span><span class="fi-name">' + data.name + '</span>';
+    var leftPct = 8 + Math.random() * 76;
+    el.style.left = leftPct + '%';
+    el.style.top = '-70px';
+    lane.appendChild(el);
+
+    var diff = DIFFICULTIES[difficulty];
+    var duration = Math.max(diff.fallMin, diff.fallBase - collected.length * 0.08);
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        el.style.transition = 'top ' + duration + 's linear';
+        el.style.top = (lane.clientHeight + 80) + 'px';
+      });
+    });
+
+    el.addEventListener('click', function(){ handleCatch(el, data, isNeeded); });
+    el.addEventListener('transitionend', function(){ handleMiss(el, data, isNeeded); });
+  }
+
+  function handleCatch(el, data, isNeeded){
+    if (el.dataset.done) return;
+    el.dataset.done = '1';
+    el.classList.add('caught');
+    if (isNeeded){
+      activeNeededIds.delete(data.id);
+      collected.push(data);
+      updatePhase1Status();
+      if (collected.length === HOSPITAL_NODES.length){
+        clearInterval(spawnTimer);
+        setTimeout(endPhase1, 500);
+      }
+    } else {
+      mistakes++;
+      el.classList.add('wrong');
+      updatePhase1Status();
+    }
+    setTimeout(function(){ if (el.parentNode) el.remove(); }, 260);
+  }
+
+  function handleMiss(el, data, isNeeded){
+    if (el.dataset.done) return;
+    el.dataset.done = '1';
+    if (isNeeded){
+      activeNeededIds.delete(data.id);
+      remainingNeeded.push(data.id);
+    }
+    if (el.parentNode) el.remove();
+  }
+
+  function updatePhase1Status(){
+    hudStatus.textContent = collected.length + '/' + HOSPITAL_NODES.length + ' recolectadas · ' + mistakes + ' errores';
+  }
+
+  function startPhase1(){
+    spawnTimer = setInterval(trySpawn, DIFFICULTIES[difficulty].spawnMs);
+  }
+
+  /* ================= Transición ================= */
+  function endPhase1(){
+    track.style.transform = 'translateX(-50%)';
+    pendingQueue = collected.slice();
+    placedNodes = {};
+    connectionsDrawn = [];
+    connectedSet = new Set();
+    clearBoardDOM();
+    renderInventory();
+    hudStatus.textContent = 'Arrastrá cada área a su nivel jerárquico';
+  }
+
+  function clearBoardDOM(){
+    document.querySelectorAll('.tier-slots').forEach(function(el){ el.innerHTML = ''; });
+    inventoryBar.innerHTML = '';
+    connSvg.innerHTML = '';
+  }
+
+  /* ================= Fase 2: tablero ================= */
+  function renderInventory(){
+    inventoryBar.innerHTML = '';
+    var visible = pendingQueue.slice(0, 3);
+    visible.forEach(function(nodeObj){
+      var chip = document.createElement('div');
+      chip.className = 'inv-item';
+      chip.dataset.id = nodeObj.id;
+      chip.innerHTML = '<span class="inv-icon">' + nodeObj.icon + '</span><span class="inv-name">' + nodeObj.name + '</span>';
+      chip.addEventListener('pointerdown', onDragStart);
+      inventoryBar.appendChild(chip);
+    });
+    var placedCount = HOSPITAL_NODES.length - pendingQueue.length;
+    hudStatus.textContent = placedCount + '/' + HOSPITAL_NODES.length + ' colocadas';
+  }
+
+  function onDragStart(e){
+    var chip = e.currentTarget;
+    var rect = chip.getBoundingClientRect();
+    dragState = {
+      id: chip.dataset.id,
+      chip: chip,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      startRect: rect
+    };
+    try { chip.setPointerCapture(e.pointerId); } catch(err){}
+    chip.classList.add('dragging');
+    chip.style.width = rect.width + 'px';
+    /* Se saca del árbol de .track (que tiene transform) y se mueve a <body>:
+       position:fixed necesita que ningún ancestro tenga transform, si no
+       queda "fixed" relativo a ese ancestro en vez de a la ventana. */
+    document.body.appendChild(chip);
+    chip.style.position = 'fixed';
+    chip.style.left = rect.left + 'px';
+    chip.style.top = rect.top + 'px';
+    chip.style.zIndex = 1000;
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+  }
+
+  function onDragMove(e){
+    if (!dragState) return;
+    dragState.chip.style.left = (e.clientX - dragState.offsetX) + 'px';
+    dragState.chip.style.top = (e.clientY - dragState.offsetY) + 'px';
+    document.querySelectorAll('.tier-row').forEach(function(r){ r.classList.remove('drag-over'); });
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var tierRow = under ? under.closest('.tier-row') : null;
+    if (tierRow) tierRow.classList.add('drag-over');
+  }
+
+  function onDragEnd(e){
+    if (!dragState) return;
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    document.querySelectorAll('.tier-row').forEach(function(r){ r.classList.remove('drag-over'); });
+
+    var chip = dragState.chip;
+    chip.style.pointerEvents = 'none';
+    var dropEl = document.elementFromPoint(e.clientX, e.clientY);
+    chip.style.pointerEvents = '';
+    var tierRow = dropEl ? dropEl.closest('.tier-row') : null;
+    var nodeObj = collected.filter(function(n){ return n.id === dragState.id; })[0];
+
+    if (tierRow && Number(tierRow.dataset.tier) === nodeObj.tier){
+      placeNode(nodeObj, tierRow);
+      chip.remove();
+      pendingQueue = pendingQueue.filter(function(n){ return n.id !== nodeObj.id; });
+      renderInventory();
+      if (pendingQueue.length === 0) startConnectionPhase();
+    } else {
+      chip.style.transition = 'left .3s ease, top .3s ease';
+      chip.style.left = dragState.startRect.left + 'px';
+      chip.style.top = dragState.startRect.top + 'px';
+      chip.classList.add('wrong');
+      setTimeout(function(){
+        chip.remove();
+        renderInventory();
+      }, 320);
+    }
+    dragState = null;
+  }
+
+  function placeNode(nodeObj, tierRow){
+    var slot = tierRow.querySelector('.tier-slots');
+    var box = document.createElement('div');
+    box.className = 'node-box';
+    box.dataset.id = nodeObj.id;
+    box.innerHTML = '<span class="node-icon">' + nodeObj.icon + '</span><span class="node-name">' + nodeObj.name + '</span>';
+    slot.appendChild(box);
+    placedNodes[nodeObj.id] = box;
+  }
+
+  /* ================= Fase 2B: conexiones ================= */
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function startConnectionPhase(){
+    connectionModeActive = true;
+    hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (0/' + (HOSPITAL_NODES.length - 1) + ')';
+    Object.keys(placedNodes).forEach(function(id){
+      var box = placedNodes[id];
+      box.classList.add('clickable');
+      box.addEventListener('pointerdown', onConnDragStart);
+    });
+  }
+
+  function onConnDragStart(e){
+    if (!connectionModeActive) return;
+    var box = e.currentTarget;
+    var id = box.dataset.id;
+    var nodeData = HOSPITAL_NODES.filter(function(n){ return n.id === id; })[0];
+
+    if (nodeData.parent === null){
+      toast('Dirección General no necesita conectarse hacia arriba');
+      return;
+    }
+    if (connectedSet.has(id)) return;
+
+    try { box.setPointerCapture(e.pointerId); } catch(err){}
+    box.classList.add('connect-source');
+
+    var tempLine = document.createElementNS(SVG_NS, 'line');
+    tempLine.setAttribute('class', 'conn-line temp');
+    connSvg.appendChild(tempLine);
+
+    connDragState = { childId: id, fromEl: box, tempLine: tempLine };
+    updateTempLine(e.clientX, e.clientY);
+
+    document.addEventListener('pointermove', onConnDragMove);
+    document.addEventListener('pointerup', onConnDragEnd);
+  }
+
+  function updateTempLine(clientX, clientY){
+    var a = getCenter(connDragState.fromEl);
+    var br = board.getBoundingClientRect();
+    connDragState.tempLine.setAttribute('x1', a.x);
+    connDragState.tempLine.setAttribute('y1', a.y);
+    connDragState.tempLine.setAttribute('x2', clientX - br.left);
+    connDragState.tempLine.setAttribute('y2', clientY - br.top);
+  }
+
+  function onConnDragMove(e){
+    if (!connDragState) return;
+    updateTempLine(e.clientX, e.clientY);
+    document.querySelectorAll('.node-box.target-hover').forEach(function(b){ b.classList.remove('target-hover'); });
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var box = under ? under.closest('.node-box') : null;
+    if (box && box.dataset.id !== connDragState.childId) box.classList.add('target-hover');
+  }
+
+  function onConnDragEnd(e){
+    if (!connDragState) return;
+    document.removeEventListener('pointermove', onConnDragMove);
+    document.removeEventListener('pointerup', onConnDragEnd);
+    document.querySelectorAll('.node-box.target-hover').forEach(function(b){ b.classList.remove('target-hover'); });
+
+    var fromEl = connDragState.fromEl;
+    var childId = connDragState.childId;
+    fromEl.classList.remove('connect-source');
+    connDragState.tempLine.remove();
+
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var targetBox = under ? under.closest('.node-box') : null;
+    var childData = HOSPITAL_NODES.filter(function(n){ return n.id === childId; })[0];
+
+    if (targetBox && targetBox.dataset.id === childData.parent){
+      connectionsDrawn.push({ childId: childId, parentId: targetBox.dataset.id });
+      connectedSet.add(childId);
+      fromEl.classList.add('connected');
+      reorderTiers();
+      redrawLines();
+      hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (' + connectedSet.size + '/' + (HOSPITAL_NODES.length - 1) + ')';
+      if (connectedSet.size === HOSPITAL_NODES.length - 1){
+        connectionModeActive = false;
+        endGame();
+      }
+    } else {
+      fromEl.classList.add('shake');
+      setTimeout(function(){ fromEl.classList.remove('shake'); }, 350);
+    }
+    connDragState = null;
+  }
+
+  function getCenter(el){
+    var r = el.getBoundingClientRect();
+    var br = board.getBoundingClientRect();
+    return { x: r.left - br.left + r.width / 2, y: r.top - br.top + r.height / 2 };
+  }
+
+  /* Reordena las cajas de cada nivel según la posición de su superior directo,
+     para que las líneas de conexión no se crucen. */
+  function reorderTierByParent(tier){
+    var slot = document.querySelector('.tier-row[data-tier="' + tier + '"] .tier-slots');
+    var parentSlot = document.querySelector('.tier-row[data-tier="' + (tier - 1) + '"] .tier-slots');
+    if (!slot || !parentSlot) return;
+    var parentOrder = Array.prototype.map.call(parentSlot.children, function(el){ return el.dataset.id; });
+    var boxes = Array.prototype.slice.call(slot.children);
+    boxes.sort(function(a, b){
+      var na = HOSPITAL_NODES.filter(function(n){ return n.id === a.dataset.id; })[0];
+      var nb = HOSPITAL_NODES.filter(function(n){ return n.id === b.dataset.id; })[0];
+      var ia = parentOrder.indexOf(na.parent); if (ia === -1) ia = 999;
+      var ib = parentOrder.indexOf(nb.parent); if (ib === -1) ib = 999;
+      return ia - ib;
+    });
+    boxes.forEach(function(b){ slot.appendChild(b); });
+  }
+  function reorderTiers(){
+    reorderTierByParent(2);
+    reorderTierByParent(3);
+  }
+
+  function redrawLines(){
+    connSvg.innerHTML = '';
+    connectionsDrawn.forEach(function(c){
+      var childEl = placedNodes[c.childId];
+      var parentEl = placedNodes[c.parentId];
+      if (!childEl || !parentEl) return;
+      var a = getCenter(childEl);
+      var b = getCenter(parentEl);
+      var line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', a.x);
+      line.setAttribute('y1', a.y);
+      line.setAttribute('x2', b.x);
+      line.setAttribute('y2', b.y);
+      line.setAttribute('class', 'conn-line');
+      connSvg.appendChild(line);
+    });
+  }
+  window.addEventListener('resize', debounce(function(){
+    if (connectionsDrawn.length) redrawLines();
+  }, 150));
+
+  /* ================= Victoria ================= */
+  function endGame(){
+    stopTimer();
+    setTimeout(function(){
+      showScreen('screen-victory');
+      $('victoryTime').textContent = hudTimer.textContent.replace('⏱ ', '');
+      $('victoryMistakes').textContent = mistakes;
+    }, 500);
+  }
+
+  /* ================= Ciclo de juego ================= */
+  function resetGameState(){
+    collected = [];
+    mistakes = 0;
+    remainingNeeded = shuffle(HOSPITAL_NODES.map(function(n){ return n.id; }));
+    activeNeededIds = new Set();
+    pendingQueue = [];
+    placedNodes = {};
+    connectionsDrawn = [];
+    connectedSet = new Set();
+    connDragState = null;
+    connectionModeActive = false;
+    lane.innerHTML = '';
+    clearBoardDOM();
+    track.style.transition = 'none';
+    track.style.transform = 'translateX(0%)';
+    requestAnimationFrame(function(){ track.style.transition = ''; });
+    hudStatus.textContent = '0/' + HOSPITAL_NODES.length + ' recolectadas · 0 errores';
+  }
+
+  function startGame(){
+    resetGameState();
+    showScreen('screen-game');
+    startTimer();
+    startPhase1();
+  }
+
+  /* ================= Tutorial ================= */
+  function openTutorial(fromPlay){
+    tutorialFromPlay = !!fromPlay;
+    $('tutorialModal').classList.remove('hidden');
+  }
+  function closeTutorial(){
+    $('tutorialModal').classList.add('hidden');
+    tutorialShown = true;
+    if (tutorialFromPlay){
+      tutorialFromPlay = false;
+      showScreen('screen-levels');
+    }
+  }
+
+  /* ================= Eventos UI ================= */
+  $('btnPlay').addEventListener('click', function(){
+    if (!tutorialShown) openTutorial(true);
+    else showScreen('screen-levels');
+  });
+  $('btnCloseTutorial').addEventListener('click', closeTutorial);
+  $('topHelpBtn').addEventListener('click', function(){ openTutorial(false); });
+  $('btnBackToStart').addEventListener('click', function(){ showScreen('screen-start'); });
+
+  document.querySelectorAll('.diff-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      difficulty = btn.dataset.difficulty;
+      document.querySelectorAll('.diff-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.level-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      if (card.classList.contains('locked')){
+        toast('Este escenario va a estar disponible pronto');
+        return;
+      }
+      startGame();
+    });
+  });
+
+  $('btnReplay').addEventListener('click', function(){ startGame(); });
+  $('btnToMenu').addEventListener('click', function(){
+    resetGameState();
+    showScreen('screen-levels');
+  });
+
+})();
+</script>
+</body>
+</html>
