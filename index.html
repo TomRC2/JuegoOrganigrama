@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Organigrama: Hospital</title>
+<title>Organigrama</title>
 <style>
   :root{
     --bg1:#1e2a5e;
@@ -368,17 +368,15 @@
         <h3>Hospital</h3>
         <p>Armá la jerarquía médica y administrativa.</p>
       </div>
-      <div class="level-card locked" data-level="videogames">
-        <div class="badge">Próximamente</div>
+      <div class="level-card" data-level="videogames">
         <div class="icon">🎮</div>
         <h3>Estudio de Videojuegos</h3>
-        <p>Disponible pronto.</p>
+        <p>Armá la jerarquía de producción y administración.</p>
       </div>
-      <div class="level-card locked" data-level="supermarket">
-        <div class="badge">Próximamente</div>
+      <div class="level-card" data-level="supermarket">
         <div class="icon">🛒</div>
         <h3>Supermercado</h3>
-        <p>Disponible pronto.</p>
+        <p>Armá la jerarquía de operaciones y administración.</p>
       </div>
     </div>
     <button class="btn btn-ghost" id="btnBackToStart">← Volver</button>
@@ -428,7 +426,7 @@
     <div class="victory-card">
       <div class="big">🏆</div>
       <h2 style="margin:0 0 4px;">¡Organigrama completo!</h2>
-      <p style="color:var(--muted);margin:0;">Hospital</p>
+      <p style="color:var(--muted);margin:0;" id="victoryScenario">Hospital</p>
       <div class="stat-row">
         <div class="stat"><b id="victoryTime">00:00</b><span>Tiempo total</span></div>
         <div class="stat"><b id="victoryMistakes">0</b><span>Errores</span></div>
@@ -474,33 +472,57 @@
   "use strict";
 
   /* ================= Datos ================= */
-  var HOSPITAL_NODES = [
-    { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏛️' },
-    { id:'dm', name:'Dirección Médica',  tier:2, parent:'dg',  icon:'🩺' },
-    { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
-    { id:'ur', name:'Urgencias',         tier:3, parent:'dm',  icon:'🚑' },
-    { id:'ci', name:'Cirugía',           tier:3, parent:'dm',  icon:'🧑‍⚕️' },
-    { id:'en', name:'Enfermería',        tier:3, parent:'dm',  icon:'💉' },
-    { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
-    { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
-  ];
-  var DISTRACTORS = [
-    { name:'Diseño de Niveles',   icon:'🎮' },
-    { name:'Programación',        icon:'💻' },
-    { name:'Arte y Animación',    icon:'🎨' },
-    { name:'Control de Calidad',  icon:'🐞' },
-    { name:'Cajas',               icon:'🛒' },
-    { name:'Reposición',          icon:'📦' },
-    { name:'Góndolas',            icon:'🥫' },
-    { name:'Logística',           icon:'🚚' }
-  ];
+  var LEVELS = {
+    hospital: {
+      label: 'Hospital',
+      nodes: [
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏛️' },
+        { id:'dm', name:'Dirección Médica',  tier:2, parent:'dg',  icon:'🩺' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
+        { id:'ur', name:'Urgencias',         tier:3, parent:'dm',  icon:'🚑' },
+        { id:'ci', name:'Cirugía',           tier:3, parent:'dm',  icon:'🧑‍⚕️' },
+        { id:'en', name:'Enfermería',        tier:3, parent:'dm',  icon:'💉' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+      ]
+    },
+    videogames: {
+      label: 'Estudio de Videojuegos',
+      nodes: [
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🎮' },
+        { id:'pr', name:'Producción',        tier:2, parent:'dg',  icon:'🎯' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
+        { id:'dn', name:'Diseño de Niveles', tier:3, parent:'pr',  icon:'🗺️' },
+        { id:'pg', name:'Programación',      tier:3, parent:'pr',  icon:'💻' },
+        { id:'ar', name:'Arte y Animación',  tier:3, parent:'pr',  icon:'🎨' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+      ]
+    },
+    supermarket: {
+      label: 'Supermercado',
+      nodes: [
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏬' },
+        { id:'op', name:'Operaciones',       tier:2, parent:'dg',  icon:'🛒' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
+        { id:'ca', name:'Cajas',             tier:3, parent:'op',  icon:'💳' },
+        { id:'re', name:'Reposición',        tier:3, parent:'op',  icon:'📦' },
+        { id:'lo', name:'Logística',         tier:3, parent:'op',  icon:'🚚' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+      ]
+    }
+  };
   var DIFFICULTIES = {
-    easy:   { fallBase:6.4, fallMin:4.4, spawnMs:1200 },
-    normal: { fallBase:4.6, fallMin:2.6, spawnMs:950 },
-    hard:   { fallBase:3.2, fallMin:1.7, spawnMs:700 }
+    easy:   { fallBase:8.2, fallMin:6.0, spawnMs:1450 },
+    normal: { fallBase:6.4, fallMin:4.4, spawnMs:1200 },
+    hard:   { fallBase:4.6, fallMin:2.6, spawnMs:950 }
   };
 
   /* ================= Estado ================= */
+  var currentLevelId = 'hospital';
+  var NODES = LEVELS.hospital.nodes;
+  var distractorPool = [];
   var collected = [];
   var mistakes = 0;
   var remainingNeeded = [];
@@ -531,6 +553,8 @@
   var inventoryBar = $('inventoryBar');
   var hudStatus = $('hudStatus');
   var hudTimer = $('hudTimer');
+  var hudScenario = $('hudScenario');
+  var victoryScenario = $('victoryScenario');
   var toastEl = $('toast');
 
   /* ================= Utils ================= */
@@ -589,10 +613,10 @@
     if (useNeeded){
       var id = remainingNeeded.shift();
       activeNeededIds.add(id);
-      var nodeData = HOSPITAL_NODES.filter(function(n){ return n.id === id; })[0];
+      var nodeData = NODES.filter(function(n){ return n.id === id; })[0];
       spawnFallingItem(nodeData, true);
     } else {
-      var d = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
+      var d = distractorPool[Math.floor(Math.random() * distractorPool.length)];
       spawnFallingItem(d, false);
     }
   }
@@ -627,7 +651,7 @@
       activeNeededIds.delete(data.id);
       collected.push(data);
       updatePhase1Status();
-      if (collected.length === HOSPITAL_NODES.length){
+      if (collected.length === NODES.length){
         clearInterval(spawnTimer);
         setTimeout(endPhase1, 500);
       }
@@ -650,7 +674,7 @@
   }
 
   function updatePhase1Status(){
-    hudStatus.textContent = collected.length + '/' + HOSPITAL_NODES.length + ' recolectadas · ' + mistakes + ' errores';
+    hudStatus.textContent = collected.length + '/' + NODES.length + ' recolectadas · ' + mistakes + ' errores';
   }
 
   function startPhase1(){
@@ -687,8 +711,8 @@
       chip.addEventListener('pointerdown', onDragStart);
       inventoryBar.appendChild(chip);
     });
-    var placedCount = HOSPITAL_NODES.length - pendingQueue.length;
-    hudStatus.textContent = placedCount + '/' + HOSPITAL_NODES.length + ' colocadas';
+    var placedCount = NODES.length - pendingQueue.length;
+    hudStatus.textContent = placedCount + '/' + NODES.length + ' colocadas';
   }
 
   function onDragStart(e){
@@ -773,7 +797,7 @@
 
   function startConnectionPhase(){
     connectionModeActive = true;
-    hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (0/' + (HOSPITAL_NODES.length - 1) + ')';
+    hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (0/' + (NODES.length - 1) + ')';
     Object.keys(placedNodes).forEach(function(id){
       var box = placedNodes[id];
       box.classList.add('clickable');
@@ -785,7 +809,7 @@
     if (!connectionModeActive) return;
     var box = e.currentTarget;
     var id = box.dataset.id;
-    var nodeData = HOSPITAL_NODES.filter(function(n){ return n.id === id; })[0];
+    var nodeData = NODES.filter(function(n){ return n.id === id; })[0];
 
     if (nodeData.parent === null){
       toast('Dirección General no necesita conectarse hacia arriba');
@@ -838,7 +862,7 @@
 
     var under = document.elementFromPoint(e.clientX, e.clientY);
     var targetBox = under ? under.closest('.node-box') : null;
-    var childData = HOSPITAL_NODES.filter(function(n){ return n.id === childId; })[0];
+    var childData = NODES.filter(function(n){ return n.id === childId; })[0];
 
     if (targetBox && targetBox.dataset.id === childData.parent){
       connectionsDrawn.push({ childId: childId, parentId: targetBox.dataset.id });
@@ -846,8 +870,8 @@
       fromEl.classList.add('connected');
       reorderTiers();
       redrawLines();
-      hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (' + connectedSet.size + '/' + (HOSPITAL_NODES.length - 1) + ')';
-      if (connectedSet.size === HOSPITAL_NODES.length - 1){
+      hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (' + connectedSet.size + '/' + (NODES.length - 1) + ')';
+      if (connectedSet.size === NODES.length - 1){
         connectionModeActive = false;
         endGame();
       }
@@ -873,8 +897,8 @@
     var parentOrder = Array.prototype.map.call(parentSlot.children, function(el){ return el.dataset.id; });
     var boxes = Array.prototype.slice.call(slot.children);
     boxes.sort(function(a, b){
-      var na = HOSPITAL_NODES.filter(function(n){ return n.id === a.dataset.id; })[0];
-      var nb = HOSPITAL_NODES.filter(function(n){ return n.id === b.dataset.id; })[0];
+      var na = NODES.filter(function(n){ return n.id === a.dataset.id; })[0];
+      var nb = NODES.filter(function(n){ return n.id === b.dataset.id; })[0];
       var ia = parentOrder.indexOf(na.parent); if (ia === -1) ia = 999;
       var ib = parentOrder.indexOf(nb.parent); if (ib === -1) ib = 999;
       return ia - ib;
@@ -921,7 +945,7 @@
   function resetGameState(){
     collected = [];
     mistakes = 0;
-    remainingNeeded = shuffle(HOSPITAL_NODES.map(function(n){ return n.id; }));
+    remainingNeeded = shuffle(NODES.map(function(n){ return n.id; }));
     activeNeededIds = new Set();
     pendingQueue = [];
     placedNodes = {};
@@ -934,11 +958,24 @@
     track.style.transition = 'none';
     track.style.transform = 'translateX(0%)';
     requestAnimationFrame(function(){ track.style.transition = ''; });
-    hudStatus.textContent = '0/' + HOSPITAL_NODES.length + ' recolectadas · 0 errores';
+    hudStatus.textContent = '0/' + NODES.length + ' recolectadas · 0 errores';
   }
 
-  function startGame(){
+  function getDistractorPool(levelId){
+    var pool = [];
+    Object.keys(LEVELS).forEach(function(id){
+      if (id !== levelId) pool = pool.concat(LEVELS[id].nodes);
+    });
+    return pool;
+  }
+
+  function startGame(levelId){
+    currentLevelId = levelId;
+    NODES = LEVELS[levelId].nodes;
+    distractorPool = getDistractorPool(levelId);
     resetGameState();
+    hudScenario.textContent = LEVELS[levelId].label;
+    victoryScenario.textContent = LEVELS[levelId].label;
     showScreen('screen-game');
     startTimer();
     startPhase1();
@@ -981,11 +1018,11 @@
         toast('Este escenario va a estar disponible pronto');
         return;
       }
-      startGame();
+      startGame(card.dataset.level);
     });
   });
 
-  $('btnReplay').addEventListener('click', function(){ startGame(); });
+  $('btnReplay').addEventListener('click', function(){ startGame(currentLevelId); });
   $('btnToMenu').addEventListener('click', function(){
     resetGameState();
     showScreen('screen-levels');

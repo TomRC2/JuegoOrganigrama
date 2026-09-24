@@ -1,6 +1,6 @@
-# Organigrama — Hospital (prototipo jugable)
+# Organigrama (prototipo jugable)
 
-Primer nivel completo del juego de organigramas: **Hospital**, con las dos fases del GDD (lluvia de áreas + tablero de armado y conexiones), pantalla de tutorial (con explicación de qué es un organigrama), selector de dificultad (Fácil/Normal/Difícil), selección de nivel (los otros dos escenarios están dejados como "Próximamente") y pantalla de victoria con tiempo y errores.
+Juego de organigramas con **tres escenarios jugables**: Hospital, Estudio de Videojuegos y Supermercado. Cada uno tiene las dos fases del GDD (lluvia de áreas + tablero de armado y conexiones), pantalla de tutorial (con explicación de qué es un organigrama), selector de dificultad (Fácil/Normal/Difícil) y pantalla de victoria con tiempo y errores.
 
 Es un único archivo `index.html` sin dependencias externas ni build: funciona abriéndolo directamente en el navegador, y es lo único que necesita GitHub Pages para publicarlo.
 
@@ -18,28 +18,24 @@ Cada vez que hagas un cambio: commit + push desde GitHub Desktop, y GitHub Pages
 
 ## Qué probar
 
-- **Desktop:** click para atrapar áreas en la fase 1, y arrastrar con mouse en la fase 2.
-- **Celular:** tocar para atrapar, y arrastrar con el dedo en la fase 2 (funciona con Pointer Events, no con drag-and-drop nativo de HTML, así que anda igual en touch).
-- El botón **?** (arriba a la derecha) reabre el tutorial en cualquier momento.
+- **Desktop:** click para atrapar áreas en la fase 1, arrastrar con mouse las cajas en la fase 2, y arrastrar una línea desde cada área hasta su superior para conectarla.
+- **Celular:** tocar para atrapar, y arrastrar con el dedo tanto las cajas como las líneas de conexión (todo con Pointer Events, no con drag-and-drop nativo de HTML, así que anda igual en touch).
+- El botón **?** (arriba a la derecha, ya no se superpone con el cronómetro) reabre el tutorial en cualquier momento.
+- El selector de dificultad (pantalla de selección de nivel) solo cambia la velocidad de caída y de aparición de áreas en la fase 1 — nada más. Cada escalón de dificultad quedó más lento que antes (Difícil ≈ la vieja Normal, Normal ≈ la vieja Fácil, y Fácil es aún más lenta que eso).
+- Al conectar las áreas, el nivel se reordena solo para que las líneas no se crucen (agrupa cada área bajo su superior directo). En pantallas angostas, si un nivel tiene muchas áreas, se angostan para entrar todas en una fila en vez de saltar de línea (saltar de línea también produce cruces).
+- Los tres escenarios (Hospital, Estudio de Videojuegos, Supermercado) ya están desbloqueados y son totalmente jugables desde la pantalla de selección de nivel. Cada uno usa como distractores en la fase 1 las áreas de los otros dos escenarios.
 
 ## Estructura de datos (por si querés ajustar el organigrama)
 
-Adentro del `<script>`, al principio, están `HOSPITAL_NODES` (los 8 nodos del organigrama con `id`, `name`, `tier` de 1 a 3, `parent` y `icon`) y `DISTRACTORS` (las áreas de otras industrias que caen como señuelo). Cambiar nombres, íconos o la jerarquía es cuestión de editar esos dos arrays.
+Adentro del `<script>`, al principio, está el objeto `LEVELS`, con una entrada por escenario (`hospital`, `videogames`, `supermarket`). Cada entrada tiene `label` (el nombre que se muestra en el HUD y en la pantalla de victoria) y `nodes` (los nodos del organigrama con `id`, `name`, `tier` de 1 a 3, `parent` e `icon`). Los distractores de la fase 1 de cada escenario se calculan solos a partir de los nodos de los otros escenarios (función `getDistractorPool`), así que no hay que mantener una lista aparte.
 
-## Cómo sumar los otros dos escenarios (Videojuegos, Supermercado)
+Las velocidades de cada dificultad están en el objeto `DIFFICULTIES` (`fallBase`, `fallMin`, `spawnMs` por nivel de dificultad).
 
-El código ya está armado para eso, aunque hoy solo hay data cargada para Hospital:
-
-- Habría que convertir `HOSPITAL_NODES` en un objeto `LEVELS = { hospital: {...}, videogames: {...}, supermarket: {...} }`, con sus propios nodos y, para cada uno, usar como distractores los nodos de los otros dos escenarios.
-- `startGame()` ya recibe el `level` clickeado desde `.level-card` — hoy lo ignora y siempre arma Hospital; solo falta que lea `LEVELS[level]` en vez de la constante fija.
-- Sacar la clase `locked` de las otras dos `level-card` en el HTML cuando tengan su data.
-
-No hace falta tocar nada de la lógica de fases (lluvia, drag & drop, conexiones): es genérica y ya funciona para cualquier jerarquía de 3 niveles.
+Para sumar un cuarto escenario: agregar una entrada más a `LEVELS` con la misma forma (nodos en tier 1/2/3, cada uno con su `parent`), y una `.level-card` más en el HTML con su `data-level` correspondiente. No hace falta tocar la lógica de fases (lluvia, drag & drop, conexiones): es genérica y ya funciona para cualquier jerarquía de 3 niveles.
 
 ## Estado de este prototipo
 
-Probado de punta a punta (fase 1 → fase 2 → conexiones → victoria) en viewport de escritorio y de celular. Cosas que quedaron afuera de este primer corte, para sumar después si querés:
+Los tres escenarios están jugables de punta a punta (fase 1 → fase 2 → conexiones → victoria), en las 3 dificultades. Cosas que quedaron afuera de este corte, para sumar después si querés:
 
-- Los otros dos escenarios (Videojuegos, Supermercado).
 - Guardar el mejor tiempo entre partidas (hoy se resetea al recargar la página).
-- Reordenar automáticamente las cajas dentro de cada nivel para minimizar cruces de líneas (el GDD lo menciona; hoy las líneas se ven bien pero pueden cruzarse si las áreas quedan en un orden poco prolijo).
+- Animar el reordenamiento de las cajas (hoy el orden se corrige al instante, sin transición).
