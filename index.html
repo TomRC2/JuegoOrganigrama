@@ -6,19 +6,27 @@
 <title>Organigrama</title>
 <style>
   :root{
-    --bg1:#1e2a5e;
-    --bg2:#3b3486;
-    --card:#ffffff;
-    --card-ink:#1c2340;
-    --muted:#5b6280;
-    --accent:#ff6b6b;
-    --accent2:#4ecdc4;
-    --tier1:#e8a33d;
-    --tier2:#3d8be8;
-    --tier3:#3dbf6c;
-    --danger:#e8503d;
-    --radius:16px;
+    --bg1:#141c30;
+    --bg2:#2a3650;
+    --card:#faf3e2;
+    --card-ink:#2b2a28;
+    --muted:#6b6150;
+    --accent:#b23a2f;
+    --accent2:#3ba88f;
+    --tier1:#c98a2e;
+    --tier2:#2f6f9e;
+    --tier3:#2f7d4f;
+    --danger:#b23a2f;
+    --radius:14px;
     --shadow:0 8px 24px rgba(10,15,40,.25);
+    /* ---- paleta "oficina corporativa con humor" ---- */
+    --paper:#f3e9d2;
+    --paper-edge:#d9c79a;
+    --ink-office:#2b2a28;
+    --stamp-red:#b23a2f;
+    --stamp-green:#2f7d4f;
+    --clock-bg:#1b1f29;
+    --clock-fg:#8fe6a0;
     font-size:16px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -34,6 +42,32 @@
     width:100vw;
   }
   #app{position:relative;flex:1;display:flex;flex-direction:column;min-height:0;}
+
+  /* ---------- Fondos por escenario (solo durante la partida) ---------- */
+  /* Fuera de juego (inicio/selección/victoria) se usa el degradé navy por
+     defecto de :root; al entrar a jugar, startGame() le agrega a <body>
+     la clase theme-<levelId>, que pisa --bg1/--bg2 y suma una textura
+     sutil de fondo relacionada al rubro. Al volver al menú se saca la clase. */
+  body.theme-hospital{
+    --bg1:#0c2b3a; --bg2:#1d5063;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 2px, transparent 2px 48px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.045) 0 2px, transparent 2px 48px),
+      linear-gradient(160deg,var(--bg1),var(--bg2));
+  }
+  body.theme-videogames{
+    --bg1:#1a1030; --bg2:#3c1f5e;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px),
+      radial-gradient(circle at 50% -10%, rgba(185,110,255,.3), transparent 55%),
+      linear-gradient(160deg,var(--bg1),var(--bg2));
+  }
+  body.theme-supermarket{
+    --bg1:#2b2010; --bg2:#4d3a18;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 10px, transparent 10px 20px),
+      linear-gradient(160deg,var(--bg1),var(--bg2));
+  }
 
   /* ---------- Screens ---------- */
   .screen{
@@ -77,23 +111,30 @@
   .btn:active{transform:scale(.96);}
   .btn-primary{background:var(--accent);color:#fff;}
   .btn-secondary{background:rgba(255,255,255,.15);color:#fff;border:2px solid rgba(255,255,255,.5);}
+  .victory-card .btn-secondary{background:transparent;color:var(--ink-office);border:2px solid var(--paper-edge);}
   .btn-ghost{background:transparent;color:#cfd4ff;text-decoration:underline;box-shadow:none;padding:8px 10px;}
   .btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
 
-  #topHelpBtn{
+  .corner-btn{
     position:absolute;
     top:calc(env(safe-area-inset-top,0px) + 12px);
-    right:14px;
-    width:38px;height:38px;
+    width:40px;height:40px;
     border-radius:50%;
-    background:rgba(255,255,255,.18);
-    color:#fff;
-    border:2px solid rgba(255,255,255,.5);
+    background:rgba(255,255,255,.06);
+    color:var(--stamp-red);
+    border:3px solid var(--stamp-red);
     font-weight:800;
-    font-size:16px;
+    font-size:17px;
+    font-family:Georgia,'Times New Roman',serif;
     z-index:50;
     cursor:pointer;
+    transform:rotate(-10deg);
+    box-shadow:0 0 0 2px rgba(178,58,47,.12) inset;
   }
+  .corner-btn:active{transform:rotate(-10deg) scale(.94);}
+  #topHelpBtn{right:14px;}
+  #muteBtn{left:14px;font-size:16px;transform:rotate(8deg);}
+  #muteBtn:active{transform:rotate(8deg) scale(.94);}
 
   /* ---------- Level select ---------- */
   .diff-row{
@@ -101,11 +142,12 @@
     margin-bottom:18px;color:#cfd4ff;font-size:13px;font-weight:600;
   }
   .diff-btn{
-    appearance:none;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.1);
-    color:#fff;border-radius:999px;padding:7px 16px;font-size:13px;font-weight:700;
+    appearance:none;border:2px dashed rgba(255,255,255,.5);background:rgba(255,255,255,.08);
+    color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.04em;
     cursor:pointer;touch-action:manipulation;
   }
-  .diff-btn.active{background:var(--accent2);border-color:var(--accent2);color:#0d2926;}
+  .diff-btn.active{background:var(--accent2);border-color:var(--accent2);border-style:solid;color:#07261f;}
 
   .level-grid{
     display:grid;
@@ -120,13 +162,23 @@
   }
   .level-card{
     background:var(--card);
-    border-radius:var(--radius);
-    padding:20px 16px;
+    border-radius:4px 14px 14px 14px;
+    padding:24px 16px 20px;
     box-shadow:var(--shadow);
     cursor:pointer;
-    border:3px solid transparent;
+    border:3px solid var(--paper-edge);
     transition:transform .15s ease;
     position:relative;
+  }
+  .level-card::before{
+    content:'';
+    position:absolute;
+    top:-10px;left:16px;
+    width:50px;height:12px;
+    background:var(--card);
+    border:3px solid var(--paper-edge);
+    border-bottom:none;
+    border-radius:6px 10px 0 0;
   }
   .level-card:active{transform:scale(.97);}
   .level-card.locked{opacity:.6;cursor:default;}
@@ -147,14 +199,86 @@
     align-items:center;
     justify-content:space-between;
     gap:10px;
-    padding:calc(env(safe-area-inset-top,0px) + 10px) 62px 10px 16px;
-    color:#fff;
+    padding:calc(env(safe-area-inset-top,0px) + 10px) 62px 10px 62px;
+    color:var(--ink-office);
     flex-wrap:wrap;
-    background:rgba(0,0,0,.15);
+    background:var(--paper);
+    background-image:repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0px, rgba(0,0,0,.025) 1px, transparent 1px, transparent 23px);
+    border-bottom:3px solid var(--paper-edge);
+    box-shadow:0 4px 10px rgba(0,0,0,.18);
+    position:relative;
   }
-  .hud-left{font-weight:800;font-size:clamp(14px,3vw,17px);}
-  .hud-mid{font-size:clamp(12px,2.6vw,14px);color:#dfe2ff;flex:1;text-align:center;min-width:140px;}
-  .hud-right{display:flex;gap:10px;font-size:clamp(12px,2.6vw,14px);font-weight:700;}
+  .hud::before{
+    content:'📎';
+    position:absolute;
+    left:66px;top:-9px;
+    font-size:19px;
+    transform:rotate(-20deg);
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));
+    pointer-events:none;
+  }
+
+  /* -- carpeta/expediente (escenario) -- */
+  .hud-folder{
+    display:flex;align-items:center;gap:8px;
+    background:#fff8e8;
+    border:2px solid var(--paper-edge);
+    border-radius:8px 8px 3px 3px;
+    padding:6px 12px 6px 10px;
+    position:relative;
+    box-shadow:0 2px 0 var(--paper-edge);
+  }
+  .hud-folder::after{
+    content:'';
+    position:absolute;
+    top:-8px;left:10px;
+    width:40px;height:10px;
+    background:#fff8e8;
+    border:2px solid var(--paper-edge);
+    border-bottom:none;
+    border-radius:6px 6px 0 0;
+  }
+  .hud-folder-icon{font-size:19px;line-height:1;}
+  .hud-folder-text{display:flex;flex-direction:column;line-height:1.15;}
+  .hud-folder-label{
+    font-size:9px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700;
+  }
+  .hud-folder-name{font-weight:800;font-size:clamp(13px,3vw,16px);color:var(--ink-office);}
+
+  /* -- ticket/memo (estado de la fase) -- */
+  .hud-ticket{
+    flex:1;min-width:140px;max-width:320px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    background:#fffdf6;
+    border:2px dashed var(--paper-edge);
+    border-radius:999px;
+    padding:6px 14px;
+    font-size:clamp(11px,2.4vw,13px);font-weight:700;color:var(--ink-office);
+    text-align:center;
+  }
+  .hud-ticket-icon{font-size:14px;flex-shrink:0;}
+  .hud-ticket-text{overflow:hidden;text-overflow:ellipsis;}
+
+  /* -- reloj fichador (timer) -- */
+  .hud-clock{
+    display:flex;flex-direction:column;align-items:center;
+    background:var(--clock-bg);
+    border-radius:8px;
+    padding:4px 12px;
+    box-shadow:inset 0 0 6px rgba(0,0,0,.5), 0 2px 0 rgba(0,0,0,.3);
+  }
+  .hud-clock-label{
+    font-size:8px;text-transform:uppercase;letter-spacing:.1em;
+    color:#6fae7a;font-weight:700;
+  }
+  .hud-clock-time{
+    font-family:'Courier New',monospace;
+    font-size:clamp(14px,3vw,17px);font-weight:700;
+    color:var(--clock-fg);
+    text-shadow:0 0 6px rgba(143,230,160,.6);
+    letter-spacing:.04em;
+  }
 
   .viewport{flex:1;min-height:0;width:100%;overflow:hidden;position:relative;}
   .track{
@@ -164,7 +288,25 @@
     transition:transform .8s cubic-bezier(.65,0,.35,1);
     transform:translateX(0%);
   }
-  .phase{width:50%;height:100%;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
+  .phase{width:50%;height:100%;flex-shrink:0;display:flex;flex-direction:column;min-height:0;position:relative;}
+
+  .combo-display{
+    position:absolute;top:10px;left:50%;
+    background:var(--accent);color:#fff;font-weight:800;font-size:clamp(13px,3vw,16px);
+    padding:6px 16px;border-radius:999px;
+    box-shadow:0 4px 12px rgba(0,0,0,.3);
+    z-index:20;pointer-events:none;
+    opacity:0;
+    transform:translateX(-50%) scale(.7);
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .combo-display.show{opacity:1;transform:translateX(-50%) scale(1);}
+  .combo-display.pop{animation:comboPop .3s ease;}
+  @keyframes comboPop{
+    0%{transform:translateX(-50%) scale(1);}
+    40%{transform:translateX(-50%) scale(1.3);}
+    100%{transform:translateX(-50%) scale(1);}
+  }
 
   /* ---------- Phase 1: lluvia ---------- */
   #lane{
@@ -214,6 +356,47 @@
     75%{transform:translateX(6px);}
   }
 
+  /* ---------- Efectos visuales ---------- */
+  .particle{
+    position:fixed;width:8px;height:8px;border-radius:50%;
+    pointer-events:none;z-index:500;opacity:1;
+  }
+  @keyframes particlePop{
+    0%{transform:translate(0,0) scale(1);opacity:1;}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0;}
+  }
+  .particle.anim{animation:particlePop .55s ease-out forwards;}
+
+  #lane.flash-wrong{animation:laneFlash .3s ease;}
+  @keyframes laneFlash{
+    0%{box-shadow:inset 0 0 0 999px rgba(178,58,47,0);}
+    30%{box-shadow:inset 0 0 0 999px rgba(178,58,47,.35);}
+    100%{box-shadow:inset 0 0 0 999px rgba(178,58,47,0);}
+  }
+
+  @keyframes placedPop{
+    0%{box-shadow:0 0 0 0 rgba(59,168,143,.6);}
+    100%{box-shadow:0 0 0 14px rgba(59,168,143,0);}
+  }
+  .node-box.placed-pop{animation:placedPop .5s ease-out;}
+
+  @keyframes lineFlash{
+    0%{stroke-width:3;filter:drop-shadow(0 0 0 rgba(59,168,143,0));}
+    40%{stroke-width:6;filter:drop-shadow(0 0 6px rgba(59,168,143,.9));}
+    100%{stroke-width:3;filter:drop-shadow(0 0 0 rgba(59,168,143,0));}
+  }
+  .conn-line.flash{animation:lineFlash .5s ease-out;}
+
+  .confetti{
+    position:fixed;top:-16px;width:9px;height:14px;
+    pointer-events:none;z-index:600;border-radius:2px;
+    animation-name:confettiFall;animation-timing-function:ease-in;animation-fill-mode:forwards;
+  }
+  @keyframes confettiFall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1;}
+    100%{transform:translateY(108vh) rotate(540deg);opacity:.9;}
+  }
+
   /* ---------- Phase 2: tablero ---------- */
   #board{
     flex:1;
@@ -226,10 +409,12 @@
     gap:8px;
     position:relative;
     overflow-y:auto;
+    user-select:none;-webkit-user-select:none;
   }
   #connSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+  .conn-line.fading{opacity:0;transition:opacity .2s ease;}
   .tier-row{position:relative;z-index:2;}
-  .tier-label{color:#dfe2ff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px 4px;}
+  .tier-label{color:#dfe2ff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px 4px;user-select:none;-webkit-user-select:none;}
   .tier-slots{
     display:flex;flex-wrap:wrap;gap:clamp(6px,1.6vw,14px);
     justify-content:center;align-content:center;
@@ -259,8 +444,19 @@
     border:3px solid #ccc;
     max-width:min(40vw,200px);
     cursor:default;
+    user-select:none;-webkit-user-select:none;-webkit-user-drag:none;
   }
   .node-box .node-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .node-info{
+    position:absolute;top:-7px;right:-7px;
+    width:18px;height:18px;border-radius:50%;
+    background:var(--accent2);color:#fff;
+    font-size:11px;font-weight:800;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 4px rgba(0,0,0,.3);
+    cursor:pointer;z-index:6;touch-action:manipulation;
+  }
+  .node-info:active{transform:scale(.88);}
   .tier-row[data-tier="1"] .node-box{border-color:var(--tier1);}
   .tier-row[data-tier="2"] .node-box{border-color:var(--tier2);}
   .tier-row[data-tier="3"] .node-box{border-color:var(--tier3);}
@@ -273,6 +469,7 @@
   .inventory-bar{
     display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
     padding:10px;min-height:64px;
+    user-select:none;-webkit-user-select:none;
   }
   .inv-item{
     background:var(--card);color:var(--card-ink);
@@ -300,12 +497,34 @@
     background:var(--card);border-radius:var(--radius);
     padding:clamp(24px,6vw,40px);box-shadow:var(--shadow);
     max-width:420px;width:100%;
+    position:relative;
+  }
+  .stamp-approved{
+    position:absolute;top:16px;right:16px;
+    border:3px solid var(--stamp-green);color:var(--stamp-green);
+    font-weight:800;text-transform:uppercase;font-size:12px;
+    padding:4px 10px;border-radius:6px;
+    transform:rotate(12deg);opacity:.85;letter-spacing:.05em;
   }
   .victory-card .big{font-size:clamp(36px,9vw,54px);margin:6px 0;}
   .stat-row{display:flex;justify-content:space-around;margin:18px 0;}
   .stat{display:flex;flex-direction:column;}
   .stat b{font-size:clamp(20px,5vw,26px);}
   .stat span{color:var(--muted);font-size:12px;}
+  .best-time-line{color:var(--muted);margin:14px 0 0;font-size:13px;}
+  .hidden{display:none;}
+  .record-badge{
+    margin:10px 0 0;
+    background:linear-gradient(90deg, var(--tier1), var(--stamp-red));
+    color:#fff;font-weight:800;font-size:13px;
+    padding:8px 14px;border-radius:999px;
+    box-shadow:0 4px 10px rgba(0,0,0,.25);
+    animation:recordPulse 1.2s ease infinite;
+  }
+  @keyframes recordPulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.04);}
+  }
 
   /* ---------- Tutorial modal ---------- */
   .modal-overlay{
@@ -324,7 +543,7 @@
   .tutorial-diagram{display:flex;flex-direction:column;align-items:center;gap:8px;margin:18px 0;}
   .tut-row{display:flex;gap:10px;}
   .tut-box{
-    background:#f2f3fb;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;
+    background:#fff8e8;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;
     border:2px solid var(--tier2);
   }
   .tut-box.top{border-color:var(--tier1);}
@@ -333,7 +552,7 @@
 
   #toast{
     position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);
-    background:#1c2340;color:#fff;padding:10px 18px;border-radius:999px;
+    background:var(--ink-office);color:#fff;padding:10px 18px;border-radius:999px;
     font-size:13px;font-weight:600;opacity:0;pointer-events:none;
     transition:opacity .25s ease,transform .25s ease;z-index:300;
     max-width:88vw;text-align:center;
@@ -344,12 +563,13 @@
 <body>
 <div id="app">
 
-  <button id="topHelpBtn" title="Ayuda">?</button>
+  <button id="topHelpBtn" class="corner-btn" title="Ayuda">?</button>
+  <button id="muteBtn" class="corner-btn" title="Sonido">🔊</button>
 
   <!-- Pantalla de inicio -->
   <section id="screen-start" class="screen active">
     <div class="logo">🏢 Organigrama</div>
-    <p class="subtitle">Atrapá las áreas correctas y armá la estructura jerárquica de cada empresa antes de que se te acabe la precisión.</p>
+    <p class="subtitle">Atrapá las áreas correctas y armá la estructura jerárquica de cada empresa: cuanto más rápido y con menos errores, mejor tu marca.</p>
     <button class="btn btn-primary" id="btnPlay">Jugar</button>
   </section>
 
@@ -385,15 +605,28 @@
   <!-- Pantalla de juego -->
   <section id="screen-game" class="screen">
     <div class="hud">
-      <div class="hud-left" id="hudScenario">Hospital</div>
-      <div class="hud-mid" id="hudStatus">0/8 recolectadas</div>
-      <div class="hud-right"><span id="hudTimer">⏱ 00:00</span></div>
+      <div class="hud-folder">
+        <span class="hud-folder-icon" id="hudScenarioIcon">🏥</span>
+        <div class="hud-folder-text">
+          <span class="hud-folder-label">Expediente</span>
+          <span class="hud-folder-name" id="hudScenario">Hospital</span>
+        </div>
+      </div>
+      <div class="hud-ticket">
+        <span class="hud-ticket-icon">📋</span>
+        <span class="hud-ticket-text" id="hudStatus">0/8 recolectadas</span>
+      </div>
+      <div class="hud-clock">
+        <span class="hud-clock-label">Fichaje</span>
+        <span class="hud-clock-time" id="hudTimer">00:00</span>
+      </div>
     </div>
     <div class="viewport">
       <div class="track" id="track">
 
         <!-- Fase 1 -->
         <div class="phase phase1">
+          <div class="combo-display" id="comboDisplay">🔥 Racha x0</div>
           <div id="lane"></div>
         </div>
 
@@ -424,13 +657,16 @@
   <!-- Victoria -->
   <section id="screen-victory" class="screen">
     <div class="victory-card">
+      <div class="stamp-approved">¡Aprobado!</div>
       <div class="big">🏆</div>
       <h2 style="margin:0 0 4px;">¡Organigrama completo!</h2>
-      <p style="color:var(--muted);margin:0;" id="victoryScenario">Hospital</p>
+      <p style="color:var(--muted);margin:0;">📁 Expediente: <span id="victoryScenario">Hospital</span></p>
       <div class="stat-row">
         <div class="stat"><b id="victoryTime">00:00</b><span>Tiempo total</span></div>
         <div class="stat"><b id="victoryMistakes">0</b><span>Errores</span></div>
       </div>
+      <p class="best-time-line">Tu mejor marca (<span id="victoryBestDiff">Normal</span>): <b id="victoryBestTime">00:00</b></p>
+      <p class="record-badge hidden" id="recordBadge">🏅 ¡Nuevo récord personal!</p>
       <div class="btn-row">
         <button class="btn btn-primary" id="btnReplay">Jugar de nuevo</button>
         <button class="btn btn-secondary" id="btnToMenu">Volver al menú</button>
@@ -475,41 +711,44 @@
   var LEVELS = {
     hospital: {
       label: 'Hospital',
+      icon: '🏥',
       nodes: [
-        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏛️' },
-        { id:'dm', name:'Dirección Médica',  tier:2, parent:'dg',  icon:'🩺' },
-        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
-        { id:'ur', name:'Urgencias',         tier:3, parent:'dm',  icon:'🚑' },
-        { id:'ci', name:'Cirugía',           tier:3, parent:'dm',  icon:'🧑‍⚕️' },
-        { id:'en', name:'Enfermería',        tier:3, parent:'dm',  icon:'💉' },
-        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
-        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏛️', desc:'Marca el rumbo general del hospital y coordina a todas las áreas.' },
+        { id:'dm', name:'Dirección Médica',  tier:2, parent:'dg',  icon:'🩺', desc:'Supervisa la atención de pacientes y las áreas clínicas.' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋', desc:'Gestiona los recursos, el personal y las finanzas del hospital.' },
+        { id:'ur', name:'Urgencias',         tier:3, parent:'dm',  icon:'🚑', desc:'Atiende los casos médicos que necesitan respuesta inmediata.' },
+        { id:'ci', name:'Cirugía',           tier:3, parent:'dm',  icon:'🧑‍⚕️', desc:'Realiza las operaciones e intervenciones quirúrgicas.' },
+        { id:'en', name:'Enfermería',        tier:3, parent:'dm',  icon:'💉', desc:'Brinda cuidados directos y continuos a los pacientes.' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼', desc:'Se encarga de contrataciones, legajos y bienestar del personal.' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰', desc:'Controla el presupuesto, los pagos y los ingresos del hospital.' }
       ]
     },
     videogames: {
       label: 'Estudio de Videojuegos',
+      icon: '🎮',
       nodes: [
-        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🎮' },
-        { id:'pr', name:'Producción',        tier:2, parent:'dg',  icon:'🎯' },
-        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
-        { id:'dn', name:'Diseño de Niveles', tier:3, parent:'pr',  icon:'🗺️' },
-        { id:'pg', name:'Programación',      tier:3, parent:'pr',  icon:'💻' },
-        { id:'ar', name:'Arte y Animación',  tier:3, parent:'pr',  icon:'🎨' },
-        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
-        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🎮', desc:'Define la visión del estudio y coordina todas las áreas de desarrollo.' },
+        { id:'pr', name:'Producción',        tier:2, parent:'dg',  icon:'🎯', desc:'Planifica los tiempos, recursos y entregas del proyecto.' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋', desc:'Gestiona los recursos, el personal y las finanzas del estudio.' },
+        { id:'dn', name:'Diseño de Niveles', tier:3, parent:'pr',  icon:'🗺️', desc:'Crea los mapas, desafíos y la progresión del juego.' },
+        { id:'pg', name:'Programación',      tier:3, parent:'pr',  icon:'💻', desc:'Desarrolla el código que hace funcionar el juego.' },
+        { id:'ar', name:'Arte y Animación',  tier:3, parent:'pr',  icon:'🎨', desc:'Crea los gráficos, personajes y animaciones del juego.' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼', desc:'Se encarga de contrataciones, legajos y bienestar del equipo.' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰', desc:'Controla el presupuesto, los pagos y los ingresos del estudio.' }
       ]
     },
     supermarket: {
       label: 'Supermercado',
+      icon: '🛒',
       nodes: [
-        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏬' },
-        { id:'op', name:'Operaciones',       tier:2, parent:'dg',  icon:'🛒' },
-        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋' },
-        { id:'ca', name:'Cajas',             tier:3, parent:'op',  icon:'💳' },
-        { id:'re', name:'Reposición',        tier:3, parent:'op',  icon:'📦' },
-        { id:'lo', name:'Logística',         tier:3, parent:'op',  icon:'🚚' },
-        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼' },
-        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰' }
+        { id:'dg', name:'Dirección General', tier:1, parent:null, icon:'🏬', desc:'Define la estrategia general del supermercado y coordina las áreas.' },
+        { id:'op', name:'Operaciones',       tier:2, parent:'dg',  icon:'🛒', desc:'Coordina el funcionamiento diario de las sucursales.' },
+        { id:'ad', name:'Administración',    tier:2, parent:'dg',  icon:'📋', desc:'Gestiona los recursos, el personal y las finanzas del supermercado.' },
+        { id:'ca', name:'Cajas',             tier:3, parent:'op',  icon:'💳', desc:'Atiende los cobros y la atención al cliente en el punto de venta.' },
+        { id:'re', name:'Reposición',        tier:3, parent:'op',  icon:'📦', desc:'Mantiene las góndolas abastecidas con mercadería.' },
+        { id:'lo', name:'Logística',         tier:3, parent:'op',  icon:'🚚', desc:'Coordina el transporte y almacenamiento de la mercadería.' },
+        { id:'rh', name:'Recursos Humanos',  tier:3, parent:'ad',  icon:'🧑‍💼', desc:'Se encarga de contrataciones, legajos y bienestar del personal.' },
+        { id:'fi', name:'Finanzas',          tier:3, parent:'ad',  icon:'💰', desc:'Controla el presupuesto, los pagos y los ingresos del supermercado.' }
       ]
     }
   };
@@ -518,6 +757,7 @@
     normal: { fallBase:6.4, fallMin:4.4, spawnMs:1200 },
     hard:   { fallBase:4.6, fallMin:2.6, spawnMs:950 }
   };
+  var DIFF_LABELS = { easy:'Fácil', normal:'Normal', hard:'Difícil' };
 
   /* ================= Estado ================= */
   var currentLevelId = 'hospital';
@@ -525,6 +765,7 @@
   var distractorPool = [];
   var collected = [];
   var mistakes = 0;
+  var streak = 0;
   var remainingNeeded = [];
   var activeNeededIds = new Set();
   var spawnTimer = null;
@@ -552,12 +793,136 @@
   var track = $('track');
   var inventoryBar = $('inventoryBar');
   var hudStatus = $('hudStatus');
+  var comboDisplay = $('comboDisplay');
   var hudTimer = $('hudTimer');
   var hudScenario = $('hudScenario');
+  var hudScenarioIcon = $('hudScenarioIcon');
   var victoryScenario = $('victoryScenario');
   var toastEl = $('toast');
 
+  /* ================= Vibración (celulares con soporte) ================= */
+  function vibrate(pattern){
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch(e){}
+  }
+
+  /* ================= Sonido (Web Audio, sin archivos) ================= */
+  var SoundFX = (function(){
+    var ctx = null;
+    var muted = false;
+    try { muted = localStorage.getItem('organigrama_muted') === '1'; } catch(e){}
+
+    function getCtx(){
+      if (!ctx){
+        try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ ctx = null; }
+      }
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(function(){});
+      return ctx;
+    }
+    function tone(freq, dur, type, peak, when){
+      var ac = getCtx();
+      if (!ac || muted) return;
+      var t0 = ac.currentTime + (when || 0);
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak || 0.18, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    }
+    function sweep(f1, f2, dur, type, peak, when){
+      var ac = getCtx();
+      if (!ac || muted) return;
+      var t0 = ac.currentTime + (when || 0);
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(f1, t0);
+      osc.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak || 0.16, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    }
+
+    return {
+      isMuted: function(){ return muted; },
+      setMuted: function(v){
+        muted = v;
+        try { localStorage.setItem('organigrama_muted', v ? '1' : '0'); } catch(e){}
+      },
+      click:   function(){ tone(880, 0.05, 'square', 0.05); },
+      ok:      function(){ sweep(540, 880, 0.14, 'sine', 0.16); },
+      err:     function(){ sweep(220, 120, 0.18, 'sawtooth', 0.14); },
+      connect: function(){ tone(587, 0.12, 'sine', 0.17, 0); tone(880, 0.18, 'sine', 0.17, 0.09); },
+      victory: function(){
+        [523, 659, 784, 1047].forEach(function(f, i){ tone(f, 0.22, 'triangle', 0.18, i * 0.12); });
+      }
+    };
+  })();
+
+  /* ================= Efectos visuales ================= */
+  function burstParticles(x, y, count, colors){
+    for (var i = 0; i < count; i++){
+      /* "let" (no "var"): cada partícula necesita SU PROPIA variable para
+         que el requestAnimationFrame/setTimeout de abajo apunte a ella y no
+         a la última creada en el loop — si no, solo una termina animando y
+         borrándose, y el resto queda pegado en pantalla para siempre. */
+      let p = document.createElement('div');
+      p.className = 'particle';
+      let angle = Math.random() * Math.PI * 2;
+      let dist = 34 + Math.random() * 46;
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      document.body.appendChild(p);
+      requestAnimationFrame(function(){ p.classList.add('anim'); });
+      setTimeout(function(){ if (p.parentNode) p.remove(); }, 650);
+    }
+  }
+  function confettiBurst(){
+    var colors = ['#b23a2f', '#3ba88f', '#c98a2e', '#2f7d4f', '#2f6f9e'];
+    for (var i = 0; i < 46; i++){
+      var c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = (Math.random() * 100) + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+      c.style.animationDelay = (Math.random() * 0.4) + 's';
+      c.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+      document.body.appendChild(c);
+      (function(el){ setTimeout(function(){ if (el.parentNode) el.remove(); }, 4200); })(c);
+    }
+  }
+
   /* ================= Utils ================= */
+  function formatTime(secs){
+    var m = String(Math.floor(secs / 60)).padStart(2, '0');
+    var s = String(secs % 60).padStart(2, '0');
+    return m + ':' + s;
+  }
+  function bestTimeKey(levelId, diff){ return 'organigrama_best_' + levelId + '_' + diff; }
+  function getBestTime(levelId, diff){
+    try {
+      var v = localStorage.getItem(bestTimeKey(levelId, diff));
+      return v === null ? null : parseInt(v, 10);
+    } catch(e){ return null; }
+  }
+  function setBestTime(levelId, diff, secs){
+    try { localStorage.setItem(bestTimeKey(levelId, diff), String(secs)); } catch(e){}
+  }
   function shuffle(arr){
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--){
@@ -574,15 +939,18 @@
       t = setTimeout(function(){ fn.apply(null, args); }, ms);
     };
   }
-  function toast(msg){
+  function toast(msg, duration){
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(function(){ toastEl.classList.remove('show'); }, 2200);
+    toastTimeout = setTimeout(function(){ toastEl.classList.remove('show'); }, duration || 2200);
   }
   function showScreen(id){
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
     $(id).classList.add('active');
+    /* Red de seguridad: si por lo que sea quedó alguna partícula/confetti
+       sin borrarse, al cambiar de pantalla se limpia todo. */
+    document.querySelectorAll('.particle, .confetti').forEach(function(el){ el.remove(); });
   }
 
   /* ================= Timer ================= */
@@ -597,9 +965,7 @@
   }
   function stopTimer(){ clearInterval(timerInterval); }
   function updateTimerDisplay(){
-    var m = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
-    var s = String(elapsedSec % 60).padStart(2, '0');
-    hudTimer.textContent = '⏱ ' + m + ':' + s;
+    hudTimer.textContent = formatTime(elapsedSec);
   }
 
   /* ================= Fase 1: lluvia ================= */
@@ -650,15 +1016,27 @@
     if (isNeeded){
       activeNeededIds.delete(data.id);
       collected.push(data);
+      streak++;
+      updateCombo();
       updatePhase1Status();
+      var r = el.getBoundingClientRect();
+      burstParticles(r.left + r.width / 2, r.top + r.height / 2, 14, ['#3ba88f', '#c98a2e', '#2f7d4f', '#faf3e2']);
+      SoundFX.ok();
+      vibrate(20);
       if (collected.length === NODES.length){
         clearInterval(spawnTimer);
         setTimeout(endPhase1, 500);
       }
     } else {
       mistakes++;
+      streak = 0;
+      updateCombo();
       el.classList.add('wrong');
       updatePhase1Status();
+      lane.classList.add('flash-wrong');
+      setTimeout(function(){ lane.classList.remove('flash-wrong'); }, 320);
+      SoundFX.err();
+      vibrate(120);
     }
     setTimeout(function(){ if (el.parentNode) el.remove(); }, 260);
   }
@@ -675,6 +1053,18 @@
 
   function updatePhase1Status(){
     hudStatus.textContent = collected.length + '/' + NODES.length + ' recolectadas · ' + mistakes + ' errores';
+  }
+
+  function updateCombo(){
+    if (streak >= 2){
+      comboDisplay.textContent = '🔥 Racha x' + streak;
+      comboDisplay.classList.add('show');
+      comboDisplay.classList.remove('pop');
+      void comboDisplay.offsetWidth; /* fuerza un reflow para poder repetir la animación "pop" en cada acierto */
+      comboDisplay.classList.add('pop');
+    } else {
+      comboDisplay.classList.remove('show');
+    }
   }
 
   function startPhase1(){
@@ -764,12 +1154,16 @@
     var nodeObj = collected.filter(function(n){ return n.id === dragState.id; })[0];
 
     if (tierRow && Number(tierRow.dataset.tier) === nodeObj.tier){
+      SoundFX.ok();
+      vibrate(20);
       placeNode(nodeObj, tierRow);
       chip.remove();
       pendingQueue = pendingQueue.filter(function(n){ return n.id !== nodeObj.id; });
       renderInventory();
       if (pendingQueue.length === 0) startConnectionPhase();
     } else {
+      SoundFX.err();
+      vibrate(120);
       chip.style.transition = 'left .3s ease, top .3s ease';
       chip.style.left = dragState.startRect.left + 'px';
       chip.style.top = dragState.startRect.top + 'px';
@@ -787,9 +1181,20 @@
     var box = document.createElement('div');
     box.className = 'node-box';
     box.dataset.id = nodeObj.id;
-    box.innerHTML = '<span class="node-icon">' + nodeObj.icon + '</span><span class="node-name">' + nodeObj.name + '</span>';
+    box.innerHTML = '<span class="node-icon">' + nodeObj.icon + '</span><span class="node-name">' + nodeObj.name + '</span><span class="node-info" title="Qué hace esta área">ⓘ</span>';
+    /* El ícono "ⓘ" muestra una descripción corta sin disparar el drag de
+       conexión del recuadro: hay que frenar la propagación del pointerdown
+       (si no, llega igual al listener de onConnDragStart del box). */
+    var infoBtn = box.querySelector('.node-info');
+    infoBtn.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+    infoBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      toast(nodeObj.name + ': ' + nodeObj.desc, 3600);
+    });
     slot.appendChild(box);
     placedNodes[nodeObj.id] = box;
+    box.classList.add('placed-pop');
+    setTimeout(function(){ box.classList.remove('placed-pop'); }, 520);
   }
 
   /* ================= Fase 2B: conexiones ================= */
@@ -865,17 +1270,42 @@
     var childData = NODES.filter(function(n){ return n.id === childId; })[0];
 
     if (targetBox && targetBox.dataset.id === childData.parent){
+      SoundFX.connect();
+      vibrate(25);
       connectionsDrawn.push({ childId: childId, parentId: targetBox.dataset.id });
       connectedSet.add(childId);
       fromEl.classList.add('connected');
-      reorderTiers();
-      redrawLines();
+      var movedIds = reorderTiers();
+      /* Las líneas no se pueden "seguir" dibujando cuadro a cuadro mientras
+         las cajas se deslizan con el reordenamiento animado (FLIP): si se
+         redibujan apenas se reordena, quedan pegadas a dónde estaba la caja
+         en ese instante y no se mueven con ella. En vez de ocultar TODO el
+         SVG, solo se desvanecen las líneas que tocan una caja que de verdad
+         se movió; el resto queda fija y sin parpadeo. */
+      if (movedIds.length){
+        Array.prototype.forEach.call(connSvg.children, function(line){
+          if (movedIds.indexOf(line.dataset.child) !== -1 || movedIds.indexOf(line.dataset.parent) !== -1){
+            line.classList.add('fading');
+          }
+        });
+      }
+      setTimeout(function(){
+        redrawLines();
+        Array.prototype.forEach.call(connSvg.children, function(line){ line.classList.remove('fading'); });
+        var newLine = connSvg.lastElementChild;
+        if (newLine){
+          newLine.classList.add('flash');
+          setTimeout(function(){ newLine.classList.remove('flash'); }, 520);
+        }
+      }, 380);
       hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (' + connectedSet.size + '/' + (NODES.length - 1) + ')';
       if (connectedSet.size === NODES.length - 1){
         connectionModeActive = false;
         endGame();
       }
     } else {
+      SoundFX.err();
+      vibrate(120);
       fromEl.classList.add('shake');
       setTimeout(function(){ fromEl.classList.remove('shake'); }, 350);
     }
@@ -893,9 +1323,21 @@
   function reorderTierByParent(tier){
     var slot = document.querySelector('.tier-row[data-tier="' + tier + '"] .tier-slots');
     var parentSlot = document.querySelector('.tier-row[data-tier="' + (tier - 1) + '"] .tier-slots');
-    if (!slot || !parentSlot) return;
+    if (!slot || !parentSlot) return [];
     var parentOrder = Array.prototype.map.call(parentSlot.children, function(el){ return el.dataset.id; });
     var boxes = Array.prototype.slice.call(slot.children);
+
+    /* Técnica FLIP (First-Last-Invert-Play): se guarda dónde está cada caja
+       ANTES de reordenar (First), se reordena en el DOM como siempre
+       (instantáneo, Last), y después a cada caja que cambió de lugar se le
+       aplica un transform que la "engaña" para que arranque dibujada en su
+       posición vieja (Invert) y en el frame siguiente se anima ese
+       transform a 0 (Play), con lo cual se ve que desliza hasta su lugar
+       nuevo en vez de saltar de golpe. Devuelve los ids de las cajas que
+       realmente se movieron, para que solo esas actualicen su línea. */
+    var firstRects = new Map();
+    boxes.forEach(function(b){ firstRects.set(b, b.getBoundingClientRect()); });
+
     boxes.sort(function(a, b){
       var na = NODES.filter(function(n){ return n.id === a.dataset.id; })[0];
       var nb = NODES.filter(function(n){ return n.id === b.dataset.id; })[0];
@@ -904,27 +1346,67 @@
       return ia - ib;
     });
     boxes.forEach(function(b){ slot.appendChild(b); });
+
+    var movedIds = [];
+    boxes.forEach(function(b){
+      var first = firstRects.get(b);
+      var last = b.getBoundingClientRect();
+      var dx = first.left - last.left;
+      var dy = first.top - last.top;
+      if (!dx && !dy) return;
+      movedIds.push(b.dataset.id);
+      b.style.transition = 'none';
+      b.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          b.style.transition = 'transform .35s cubic-bezier(.4,0,.2,1)';
+          b.style.transform = '';
+          b.addEventListener('transitionend', function cleanup(){
+            b.style.transition = '';
+            b.removeEventListener('transitionend', cleanup);
+          });
+        });
+      });
+    });
+    return movedIds;
   }
   function reorderTiers(){
-    reorderTierByParent(2);
-    reorderTierByParent(3);
+    var moved2 = reorderTierByParent(2);
+    var moved3 = reorderTierByParent(3);
+    return moved2.concat(moved3);
   }
 
+  /* Actualiza la posición de cada línea existente (en vez de recrearlas
+     todas) y crea las que falten. Así una línea que no se movió nunca se
+     toca, no hay por qué hacerla parpadear. */
   function redrawLines(){
-    connSvg.innerHTML = '';
     connectionsDrawn.forEach(function(c){
+      var existing = null;
+      for (var i = 0; i < connSvg.children.length; i++){
+        var ln = connSvg.children[i];
+        if (ln.dataset.child === c.childId && ln.dataset.parent === c.parentId){ existing = ln; break; }
+      }
       var childEl = placedNodes[c.childId];
       var parentEl = placedNodes[c.parentId];
       if (!childEl || !parentEl) return;
       var a = getCenter(childEl);
       var b = getCenter(parentEl);
-      var line = document.createElementNS(SVG_NS, 'line');
-      line.setAttribute('x1', a.x);
-      line.setAttribute('y1', a.y);
-      line.setAttribute('x2', b.x);
-      line.setAttribute('y2', b.y);
-      line.setAttribute('class', 'conn-line');
-      connSvg.appendChild(line);
+      if (existing){
+        existing.setAttribute('x1', a.x);
+        existing.setAttribute('y1', a.y);
+        existing.setAttribute('x2', b.x);
+        existing.setAttribute('y2', b.y);
+      } else {
+        var line = document.createElementNS(SVG_NS, 'line');
+        line.dataset.child = c.childId;
+        line.dataset.parent = c.parentId;
+        line.setAttribute('x1', a.x);
+        line.setAttribute('y1', a.y);
+        line.setAttribute('x2', b.x);
+        line.setAttribute('y2', b.y);
+        line.setAttribute('class', 'conn-line');
+        connSvg.appendChild(line);
+      }
     });
   }
   window.addEventListener('resize', debounce(function(){
@@ -936,8 +1418,19 @@
     stopTimer();
     setTimeout(function(){
       showScreen('screen-victory');
-      $('victoryTime').textContent = hudTimer.textContent.replace('⏱ ', '');
+      $('victoryTime').textContent = hudTimer.textContent;
       $('victoryMistakes').textContent = mistakes;
+
+      var prevBest = getBestTime(currentLevelId, difficulty);
+      var isNewRecord = (prevBest === null) || (elapsedSec < prevBest);
+      if (isNewRecord) setBestTime(currentLevelId, difficulty, elapsedSec);
+      $('victoryBestDiff').textContent = DIFF_LABELS[difficulty];
+      $('victoryBestTime').textContent = formatTime(isNewRecord ? elapsedSec : prevBest);
+      $('recordBadge').classList.toggle('hidden', !isNewRecord);
+
+      SoundFX.victory();
+      vibrate([40, 60, 40, 60, 80]);
+      confettiBurst();
     }, 500);
   }
 
@@ -945,6 +1438,8 @@
   function resetGameState(){
     collected = [];
     mistakes = 0;
+    streak = 0;
+    comboDisplay.classList.remove('show', 'pop');
     remainingNeeded = shuffle(NODES.map(function(n){ return n.id; }));
     activeNeededIds = new Set();
     pendingQueue = [];
@@ -969,13 +1464,20 @@
     return pool;
   }
 
+  function applyTheme(levelId){
+    document.body.classList.remove('theme-hospital', 'theme-videogames', 'theme-supermarket');
+    if (levelId) document.body.classList.add('theme-' + levelId);
+  }
+
   function startGame(levelId){
     currentLevelId = levelId;
     NODES = LEVELS[levelId].nodes;
     distractorPool = getDistractorPool(levelId);
     resetGameState();
     hudScenario.textContent = LEVELS[levelId].label;
+    hudScenarioIcon.textContent = LEVELS[levelId].icon;
     victoryScenario.textContent = LEVELS[levelId].label;
+    applyTheme(levelId);
     showScreen('screen-game');
     startTimer();
     startPhase1();
@@ -997,15 +1499,22 @@
 
   /* ================= Eventos UI ================= */
   $('btnPlay').addEventListener('click', function(){
+    SoundFX.click();
     if (!tutorialShown) openTutorial(true);
     else showScreen('screen-levels');
   });
-  $('btnCloseTutorial').addEventListener('click', closeTutorial);
-  $('topHelpBtn').addEventListener('click', function(){ openTutorial(false); });
-  $('btnBackToStart').addEventListener('click', function(){ showScreen('screen-start'); });
+  $('btnCloseTutorial').addEventListener('click', function(){ SoundFX.click(); closeTutorial(); });
+  $('topHelpBtn').addEventListener('click', function(){ SoundFX.click(); openTutorial(false); });
+  $('btnBackToStart').addEventListener('click', function(){ SoundFX.click(); applyTheme(null); showScreen('screen-start'); });
+
+  var muteBtn = $('muteBtn');
+  function updateMuteBtn(){ muteBtn.textContent = SoundFX.isMuted() ? '🔇' : '🔊'; }
+  muteBtn.addEventListener('click', function(){ SoundFX.setMuted(!SoundFX.isMuted()); updateMuteBtn(); });
+  updateMuteBtn();
 
   document.querySelectorAll('.diff-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
+      SoundFX.click();
       difficulty = btn.dataset.difficulty;
       document.querySelectorAll('.diff-btn').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
@@ -1018,13 +1527,16 @@
         toast('Este escenario va a estar disponible pronto');
         return;
       }
+      SoundFX.click();
       startGame(card.dataset.level);
     });
   });
 
-  $('btnReplay').addEventListener('click', function(){ startGame(currentLevelId); });
+  $('btnReplay').addEventListener('click', function(){ SoundFX.click(); startGame(currentLevelId); });
   $('btnToMenu').addEventListener('click', function(){
+    SoundFX.click();
     resetGameState();
+    applyTheme(null);
     showScreen('screen-levels');
   });
 
