@@ -135,6 +135,13 @@
   #topHelpBtn{right:14px;}
   #muteBtn{left:14px;font-size:16px;transform:rotate(8deg);}
   #muteBtn:active{transform:rotate(8deg) scale(.94);}
+  /* Durante la partida el "?" se reemplaza por el botón de pausa (la ayuda
+     queda dentro del menú de pausa). */
+  #pauseBtn{display:none;right:14px;font-size:15px;font-family:inherit;letter-spacing:-2px;}
+  body.in-game #pauseBtn{display:block;}
+  body.in-game #topHelpBtn{display:none;}
+  .modal-box .btn-secondary{background:transparent;color:var(--ink-office);border:2px solid var(--paper-edge);box-shadow:none;}
+  .pause-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
 
   /* ---------- Level select ---------- */
   .diff-row{
@@ -565,6 +572,7 @@
 
   <button id="topHelpBtn" class="corner-btn" title="Ayuda">?</button>
   <button id="muteBtn" class="corner-btn" title="Sonido">🔊</button>
+  <button id="pauseBtn" class="corner-btn" title="Pausa">❚❚</button>
 
   <!-- Pantalla de inicio -->
   <section id="screen-start" class="screen active">
@@ -673,6 +681,19 @@
       </div>
     </div>
   </section>
+
+  <!-- Pausa -->
+  <div class="modal-overlay hidden" id="pauseModal">
+    <div class="modal-box" style="text-align:center;">
+      <h2>⏸ Pausa</h2>
+      <p style="color:var(--muted);margin:0;">El tiempo está detenido.</p>
+      <div class="pause-actions">
+        <button class="btn btn-primary" id="btnResume">Continuar</button>
+        <button class="btn btn-secondary" id="btnPauseHelp">Cómo se juega</button>
+        <button class="btn btn-secondary" id="btnQuit">Salir al menú</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Tutorial -->
   <div class="modal-overlay hidden" id="tutorialModal">
@@ -784,6 +805,8 @@
   var tutorialFromPlay = false;
   var toastTimeout = null;
   var dragState = null;
+  var paused = false;
+  var gameEnded = false;
 
   /* ================= DOM refs ================= */
   var $ = function(id){ return document.getElementById(id); };
@@ -856,6 +879,7 @@
     }
 
     return {
+      getContext: getCtx,
       isMuted: function(){ return muted; },
       setMuted: function(v){
         muted = v;
@@ -868,6 +892,217 @@
       victory: function(){
         [523, 659, 784, 1047].forEach(function(f, i){ tone(f, 0.22, 'triangle', 0.18, i * 0.12); });
       }
+    };
+  })();
+
+  /* ================= Música (generada con Web Audio, sin archivos) =================
+     Un secuenciador chiquito: cada pista define tempo, acordes (4 compases en
+     loop) y patrones de 16 pasos. Hay 4 pistas:
+       menu   -> chill, suave
+       easy   -> alegre y relajada
+       normal -> más ritmo, tono menor
+       hard   -> rápida, graves insistentes, acordes tensos
+     Además la "intensidad" (0 a 1) sube durante la partida: van entrando
+     más capas (batería, melodía aguda) y el tempo acelera un poco.
+     Para cambiar el volumen general tocá VOL. */
+  var Music = (function(){
+    var VOL = 0.3;
+    var ac = null, master = null, noiseBuf = null;
+    var timer = null, current = null, desired = null;
+    var step = 0, nextTime = 0, intensity = 0, gen = 0;
+
+    var TRACKS = {
+      menu: {
+        bpm:74, lift:0, th:{kick:0, snare:0, lead:0},
+        chords:[[60,64,67,71],[57,60,64,67],[53,57,60,64],[55,59,62,64]],
+        wave:{pad:'sine', bass:'sine', arp:'triangle', lead:'sine'},
+        padVol:.10, bassVol:.5, arpVol:.2, arpOct:12, arpCut:1600, bassCut:0,
+        bass:'x.......x.....x.', arp:[0,-1,-1,2,-1,1,-1,-1,3,-1,-1,2,-1,1,-1,-1],
+        kick:'', snare:'', hat:'..x...x...x...x.', hatVol:.05, lead:''
+      },
+      easy: {
+        bpm:100, lift:.06, th:{kick:.3, snare:.6, lead:.8},
+        chords:[[60,64,67,72],[55,59,62,67],[57,60,64,69],[53,57,60,65]],
+        wave:{pad:'triangle', bass:'triangle', arp:'triangle', lead:'triangle'},
+        padVol:.07, bassVol:.5, arpVol:.2, arpOct:12, arpCut:2400, bassCut:0,
+        bass:'x..x..x.x..x..x.', arp:[0,-1,1,-1,2,-1,3,-1,2,-1,1,-1,0,-1,2,-1],
+        kick:'x.......x.......', snare:'....x.......x...', hat:'..x...x...x...x.', hatVol:.08,
+        lead:'x.x.x.x.x.x.x.x.'
+      },
+      normal: {
+        bpm:118, lift:.08, th:{kick:.15, snare:.4, lead:.7},
+        chords:[[57,60,64,69],[53,57,60,65],[60,64,67,72],[55,59,62,67]],
+        wave:{pad:'triangle', bass:'sawtooth', arp:'square', lead:'sawtooth'},
+        padVol:.06, bassVol:.38, arpVol:.1, arpOct:12, arpCut:2400, bassCut:520,
+        bass:'x.x.x.x.x.x.x.x.', arp:[0,2,1,3,0,2,1,3,0,2,1,3,0,2,1,3],
+        kick:'x...x...x...x...', snare:'....x.......x...', hat:'x.x.x.x.x.x.x.x.', hatVol:.1,
+        lead:'x..x..x.x..x..x.'
+      },
+      hard: {
+        bpm:140, lift:.1, th:{kick:0, snare:.25, lead:.5},
+        chords:[[57,60,64,69],[53,57,60,65],[50,53,57,62],[52,56,59,62]],
+        wave:{pad:'sawtooth', bass:'sawtooth', arp:'square', lead:'sawtooth'},
+        padVol:.04, bassVol:.4, arpVol:.1, arpOct:12, arpCut:3200, bassCut:460,
+        bass:'xxxxxxxxxxxxxxxx', arp:[0,1,2,3,2,1,0,1,2,3,2,1,3,2,1,0],
+        kick:'x...x...x...x..x', snare:'....x.......x...', hat:'xxxxxxxxxxxxxxxx', hatVol:.1,
+        lead:'x.xx.xx.x.xx.xx.'
+      }
+    };
+
+    function mtof(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
+    function init(){
+      if (ac) return ac;
+      ac = SoundFX.getContext();
+      if (!ac) return null;
+      master = ac.createGain();
+      master.gain.value = 0.0001;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return ac;
+    }
+
+    function voice(freq, when, dur, type, vol, cut, att){
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, when);
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.linearRampToValueAtTime(vol, when + (att || 0.01));
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      if (cut){
+        var lp = ac.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = cut;
+        o.connect(lp); lp.connect(g);
+      } else {
+        o.connect(g);
+      }
+      g.connect(master);
+      o.start(when);
+      o.stop(when + dur + 0.05);
+    }
+    function kick(when){
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(150, when);
+      o.frequency.exponentialRampToValueAtTime(45, when + 0.12);
+      g.gain.setValueAtTime(0.9, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.22);
+      o.connect(g); g.connect(master);
+      o.start(when); o.stop(when + 0.25);
+    }
+    function noise(when, dur, vol, filterType, freq){
+      var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      s.buffer = noiseBuf;
+      f.type = filterType; f.frequency.value = freq;
+      g.gain.setValueAtTime(vol, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      s.connect(f); f.connect(g); g.connect(master);
+      s.start(when, Math.random() * 0.5);
+      s.stop(when + dur + 0.02);
+    }
+
+    function playStep(t, n, when, spb){
+      var bar = Math.floor(n / 16) % 4;
+      var s = n % 16;
+      var chord = t.chords[bar];
+
+      if (s === 0){
+        chord.forEach(function(m){
+          voice(mtof(m), when, spb * 16, t.wave.pad, t.padVol, 0, spb * 5);
+        });
+      }
+      if (t.bass.charAt(s) === 'x'){
+        voice(mtof(chord[0] - 24), when, spb * 1.8, t.wave.bass, t.bassVol, t.bassCut, 0.01);
+      }
+      var a = t.arp[s];
+      if (a >= 0){
+        voice(mtof(chord[a] + t.arpOct), when, spb * 1.6, t.wave.arp, t.arpVol, t.arpCut, 0.005);
+      }
+      if (t.hat.charAt(s) === 'x'){
+        noise(when, 0.04, t.hatVol * (s % 4 === 2 ? 1.4 : 1), 'highpass', 7000);
+      }
+      if (intensity >= t.th.kick && t.kick.charAt(s) === 'x') kick(when);
+      if (intensity >= t.th.snare && t.snare.charAt(s) === 'x') noise(when, 0.14, 0.3, 'bandpass', 1800);
+      if (intensity >= t.th.lead && t.lead.charAt(s) === 'x'){
+        voice(mtof(chord[(s >> 1) % 4] + t.arpOct + 12), when, spb * 1.4, t.wave.lead, t.arpVol * 0.7, t.arpCut, 0.005);
+      }
+    }
+
+    function tick(){
+      if (!ac || !current) return;
+      var t = TRACKS[current];
+      var spb = 60 / (t.bpm * (1 + t.lift * intensity)) / 4;
+      while (nextTime < ac.currentTime + 0.2){
+        playStep(t, step, nextTime, spb);
+        nextTime += spb;
+        step = (step + 1) % 64;
+      }
+    }
+
+    function stopTimer(){ clearInterval(timer); timer = null; }
+
+    function fadeOut(cb){
+      if (!ac || !timer){ if (cb) cb(); return; }
+      var now = ac.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), now);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      var myGen = gen;
+      setTimeout(function(){
+        if (myGen !== gen) return;
+        stopTimer(); current = null;
+        if (cb) cb();
+      }, 380);
+    }
+
+    function startTrack(){
+      current = desired;
+      step = 0;
+      nextTime = ac.currentTime + 0.08;
+      var now = ac.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(VOL, now + 0.8);
+      stopTimer();
+      timer = setInterval(tick, 25);
+    }
+
+    function apply(){
+      if (!init()) return;
+      var myGen = ++gen;
+      if (SoundFX.isMuted() || !desired){ fadeOut(); return; }
+      if (current === desired && timer) return;
+      if (timer){
+        /* hay otra pista sonando: fundido a silencio y arranca la nueva */
+        fadeOut(function(){ if (myGen === gen && desired && !SoundFX.isMuted()) startTrack(); });
+      } else {
+        startTrack();
+      }
+    }
+
+    document.addEventListener('visibilitychange', function(){
+      if (!ac) return;
+      if (document.hidden) ac.suspend().catch(function(){});
+      else if (!SoundFX.isMuted()) ac.resume().catch(function(){});
+    });
+
+    return {
+      /* name: 'menu' | 'easy' | 'normal' | 'hard' */
+      play: function(name){
+        intensity = (name === 'menu') ? 1 : 0;
+        if (name === desired && (timer || SoundFX.isMuted())) return;
+        desired = name;
+        apply();
+      },
+      setIntensity: function(v){ if (desired !== 'menu') intensity = Math.max(0, Math.min(1, v)); },
+      duck: function(on){
+        if (!ac || !master || !timer) return;
+        master.gain.setTargetAtTime(on ? VOL * 0.3 : VOL, ac.currentTime, 0.1);
+      },
+      refresh: apply
     };
   })();
 
@@ -948,6 +1183,7 @@
   function showScreen(id){
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
     $(id).classList.add('active');
+    document.body.classList.toggle('in-game', id === 'screen-game');
     /* Red de seguridad: si por lo que sea quedó alguna partícula/confetti
        sin borrarse, al cambiar de pantalla se limpia todo. */
     document.querySelectorAll('.particle, .confetti').forEach(function(el){ el.remove(); });
@@ -964,6 +1200,13 @@
     }, 1000);
   }
   function stopTimer(){ clearInterval(timerInterval); }
+  function resumeTimer(){
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function(){
+      elapsedSec++;
+      updateTimerDisplay();
+    }, 1000);
+  }
   function updateTimerDisplay(){
     hudTimer.textContent = formatTime(elapsedSec);
   }
@@ -998,10 +1241,12 @@
 
     var diff = DIFFICULTIES[difficulty];
     var duration = Math.max(diff.fallMin, diff.fallBase - collected.length * 0.08);
+    el.dataset.dur = duration;
+    el.dataset.end = lane.clientHeight + 80;
     requestAnimationFrame(function(){
       requestAnimationFrame(function(){
         el.style.transition = 'top ' + duration + 's linear';
-        el.style.top = (lane.clientHeight + 80) + 'px';
+        el.style.top = el.dataset.end + 'px';
       });
     });
 
@@ -1053,6 +1298,7 @@
 
   function updatePhase1Status(){
     hudStatus.textContent = collected.length + '/' + NODES.length + ' recolectadas · ' + mistakes + ' errores';
+    Music.setIntensity(collected.length / NODES.length * 0.5);
   }
 
   function updateCombo(){
@@ -1073,6 +1319,7 @@
 
   /* ================= Transición ================= */
   function endPhase1(){
+    if (gameEnded || !$('screen-game').classList.contains('active')) return;
     track.style.transform = 'translateX(-50%)';
     pendingQueue = collected.slice();
     placedNodes = {};
@@ -1103,6 +1350,7 @@
     });
     var placedCount = NODES.length - pendingQueue.length;
     hudStatus.textContent = placedCount + '/' + NODES.length + ' colocadas';
+    Music.setIntensity(0.5 + placedCount / NODES.length * 0.25);
   }
 
   function onDragStart(e){
@@ -1299,6 +1547,7 @@
         }
       }, 380);
       hudStatus.textContent = 'Arrastrá una línea desde cada área hasta su superior directo (' + connectedSet.size + '/' + (NODES.length - 1) + ')';
+      Music.setIntensity(0.75 + connectedSet.size / (NODES.length - 1) * 0.25);
       if (connectedSet.size === NODES.length - 1){
         connectionModeActive = false;
         endGame();
@@ -1415,6 +1664,7 @@
 
   /* ================= Victoria ================= */
   function endGame(){
+    gameEnded = true;
     stopTimer();
     setTimeout(function(){
       showScreen('screen-victory');
@@ -1431,11 +1681,16 @@
       SoundFX.victory();
       vibrate([40, 60, 40, 60, 80]);
       confettiBurst();
+      setTimeout(function(){
+        if ($('screen-victory').classList.contains('active')) Music.play('menu');
+      }, 2400);
     }, 500);
   }
 
   /* ================= Ciclo de juego ================= */
   function resetGameState(){
+    paused = false;
+    gameEnded = false;
     collected = [];
     mistakes = 0;
     streak = 0;
@@ -1479,8 +1734,65 @@
     victoryScenario.textContent = LEVELS[levelId].label;
     applyTheme(levelId);
     showScreen('screen-game');
+    Music.play(difficulty);
     startTimer();
     startPhase1();
+  }
+
+  /* ================= Pausa ================= */
+  function pauseGame(){
+    if (paused || gameEnded || !$('screen-game').classList.contains('active')) return;
+    paused = true;
+    stopTimer();
+    clearInterval(spawnTimer);
+    /* Congela las áreas que están cayendo: se fija su posición actual y se
+       guarda cuánto tiempo de caída les faltaba. */
+    Array.prototype.forEach.call(lane.children, function(el){
+      if (!el.dataset.dur || el.dataset.done) return;
+      var cur = parseFloat(getComputedStyle(el).top);
+      var end = parseFloat(el.dataset.end);
+      var prog = Math.min(1, Math.max(0, (cur + 70) / (end + 70)));
+      el.dataset.remain = parseFloat(el.dataset.dur) * (1 - prog);
+      el.style.transition = 'none';
+      el.style.top = cur + 'px';
+    });
+    Music.duck(true);
+    $('pauseModal').classList.remove('hidden');
+  }
+
+  function resumeGame(){
+    if (!paused) return;
+    paused = false;
+    $('pauseModal').classList.add('hidden');
+    Music.duck(false);
+    Array.prototype.forEach.call(lane.children, function(el){
+      if (el.dataset.remain === undefined || el.dataset.done) return;
+      var rem = Math.max(0.05, parseFloat(el.dataset.remain));
+      delete el.dataset.remain;
+      void el.offsetWidth;
+      el.style.transition = 'top ' + rem + 's linear';
+      el.style.top = el.dataset.end + 'px';
+    });
+    resumeTimer();
+    if (collected.length < NODES.length){
+      spawnTimer = setInterval(trySpawn, DIFFICULTIES[difficulty].spawnMs);
+    }
+  }
+
+  function quitToMenu(){
+    paused = false;
+    stopTimer();
+    clearInterval(spawnTimer);
+    dragState = null;
+    connDragState = null;
+    /* por si había una ficha agarrada en el aire */
+    document.querySelectorAll('body > .inv-item').forEach(function(el){ el.remove(); });
+    $('pauseModal').classList.add('hidden');
+    Music.duck(false);
+    resetGameState();
+    applyTheme(null);
+    showScreen('screen-levels');
+    Music.play('menu');
   }
 
   /* ================= Tutorial ================= */
@@ -1507,9 +1819,11 @@
   $('topHelpBtn').addEventListener('click', function(){ SoundFX.click(); openTutorial(false); });
   $('btnBackToStart').addEventListener('click', function(){ SoundFX.click(); applyTheme(null); showScreen('screen-start'); });
 
+  document.addEventListener('click', function(){ Music.play('menu'); }, { once:true, capture:true });
+
   var muteBtn = $('muteBtn');
   function updateMuteBtn(){ muteBtn.textContent = SoundFX.isMuted() ? '🔇' : '🔊'; }
-  muteBtn.addEventListener('click', function(){ SoundFX.setMuted(!SoundFX.isMuted()); updateMuteBtn(); });
+  muteBtn.addEventListener('click', function(){ SoundFX.setMuted(!SoundFX.isMuted()); updateMuteBtn(); Music.refresh(); });
   updateMuteBtn();
 
   document.querySelectorAll('.diff-btn').forEach(function(btn){
@@ -1532,12 +1846,24 @@
     });
   });
 
+  $('pauseBtn').addEventListener('click', function(){ SoundFX.click(); pauseGame(); });
+  $('btnResume').addEventListener('click', function(){ SoundFX.click(); resumeGame(); });
+  $('btnPauseHelp').addEventListener('click', function(){ SoundFX.click(); openTutorial(false); });
+  $('btnQuit').addEventListener('click', function(){ SoundFX.click(); quitToMenu(); });
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape' || !$('tutorialModal').classList.contains('hidden')) return;
+    if (paused) resumeGame(); else pauseGame();
+  });
+  /* si se cambia de pestaña o se bloquea el celular en medio de la partida, se pausa sola */
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) pauseGame(); });
+
   $('btnReplay').addEventListener('click', function(){ SoundFX.click(); startGame(currentLevelId); });
   $('btnToMenu').addEventListener('click', function(){
     SoundFX.click();
     resetGameState();
     applyTheme(null);
     showScreen('screen-levels');
+    Music.play('menu');
   });
 
 })();
